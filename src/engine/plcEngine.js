@@ -374,6 +374,54 @@ export class PLCEngine {
         break;
       }
 
+      case 'ADD': {
+        const valA = this.getValue(params.sourceA !== undefined ? params.sourceA : operand);
+        const valB = this.getValue(params.sourceB !== undefined ? params.sourceB : 1);
+        const dst = params.dest || operand || 'N7:0';
+        if (powerIn) {
+          this.setValue(dst, valA + valB);
+        }
+        active = powerIn;
+        powerOut = powerIn;
+        break;
+      }
+
+      case 'SUB': {
+        const valA = this.getValue(params.sourceA !== undefined ? params.sourceA : operand);
+        const valB = this.getValue(params.sourceB !== undefined ? params.sourceB : 1);
+        const dst = params.dest || operand || 'N7:0';
+        if (powerIn) {
+          this.setValue(dst, valA - valB);
+        }
+        active = powerIn;
+        powerOut = powerIn;
+        break;
+      }
+
+      case 'MUL': {
+        const valA = this.getValue(params.sourceA !== undefined ? params.sourceA : operand);
+        const valB = this.getValue(params.sourceB !== undefined ? params.sourceB : 1);
+        const dst = params.dest || operand || 'N7:0';
+        if (powerIn) {
+          this.setValue(dst, valA * valB);
+        }
+        active = powerIn;
+        powerOut = powerIn;
+        break;
+      }
+
+      case 'DIV': {
+        const valA = this.getValue(params.sourceA !== undefined ? params.sourceA : operand);
+        const valB = this.getValue(params.sourceB !== undefined ? params.sourceB : 1);
+        const dst = params.dest || operand || 'N7:0';
+        if (powerIn) {
+          this.setValue(dst, valB !== 0 ? Math.floor(valA / valB) : 0);
+        }
+        active = powerIn;
+        powerOut = powerIn;
+        break;
+      }
+
       default:
         powerOut = powerIn;
         break;

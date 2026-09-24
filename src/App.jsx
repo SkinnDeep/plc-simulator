@@ -7,6 +7,7 @@ import { HardwareTrainer } from './components/HardwareTrainer';
 import { LadderEditor } from './components/LadderEditor';
 import { LearningTab } from './components/LearningTab';
 import { TutorialModal } from './components/TutorialModal';
+import { BitMonitorDrawer } from './components/BitMonitorDrawer';
 import { validateLadderLogic } from './engine/plcValidator';
 import { Check } from 'lucide-react';
 
@@ -24,8 +25,10 @@ export function App() {
   const [currentRungs, setCurrentRungs] = useState(() => INITIAL_BLANK_RUNGS);
   const [scanResult, setScanResult] = useState(null);
   const [activeMainTab, setActiveMainTab] = useState('simulator'); // 'simulator' | 'learning'
+  const [mobileView, setMobileView] = useState('ladder'); // 'bench' | 'ladder' on mobile
   const [loadNotice, setLoadNotice] = useState(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isBitMonitorOpen, setIsBitMonitorOpen] = useState(false);
 
   const engineRef = useRef(null);
 
@@ -115,6 +118,16 @@ export function App() {
     setScanResult(res);
   };
 
+  const handleSetRegister = (addr, val) => {
+    engine.setValue(addr, val);
+    setPlcData({
+      bits: { ...engine.data.bits },
+      T4: engine.data.T4.map(t => ({ ...t })),
+      N7: [...engine.data.N7],
+      S2: { ...engine.data.S2 }
+    });
+  };
+
   // 1-Click Load Example Program into Simulator
   const handleSelectSampleProgram = (programId) => {
     const prog = SAMPLE_PROGRAMS.find(p => p.id === programId);
@@ -160,6 +173,8 @@ export function App() {
         onSelectSampleProgram={handleSelectSampleProgram}
         onOpenHelp={() => setIsHelpOpen(true)}
         hasErrors={hasErrors}
+        isBitMonitorOpen={isBitMonitorOpen}
+        onToggleBitMonitor={() => setIsBitMonitorOpen(v => !v)}
       />
 
       {/* Program Loaded Notification Banner */}
@@ -171,26 +186,57 @@ export function App() {
       )}
 
       {/* 2. Main View Area */}
-      <div className="flex-1 flex flex-col p-3 overflow-hidden">
+      <div className="flex-1 flex flex-col p-2 sm:p-3 overflow-hidden">
         {activeMainTab === 'simulator' && (
-          <div className="flex-1 flex flex-col lg:flex-row gap-3 overflow-hidden">
-            {/* Left: Hardware Trainer */}
-            <div className="w-full lg:w-[410px] shrink-0 flex flex-col overflow-y-auto">
-              <HardwareTrainer
-                plcData={plcData}
-                onToggleInput={handleToggleInput}
-                isRunning={isRunning}
-              />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Mobile Sub-View Segmented Switch (visible on screens < lg) */}
+            <div className="flex lg:hidden bg-slate-900 border border-slate-800 rounded-xl p-1 mb-2 font-bold text-xs shrink-0 shadow-sm">
+              <button
+                onClick={() => setMobileView('ladder')}
+                className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                  mobileView === 'ladder'
+                    ? 'bg-cyan-500 text-slate-950 shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>🪜 Ladder Logic Canvas</span>
+              </button>
+              <button
+                onClick={() => setMobileView('bench')}
+                className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                  mobileView === 'bench'
+                    ? 'bg-cyan-500 text-slate-950 shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>🎛️ Hardware Bench</span>
+              </button>
             </div>
 
-            {/* Right: Ladder Editor */}
-            <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-              <LadderEditor
-                rungs={currentRungs}
-                onChangeRungs={setCurrentRungs}
-                scanResult={scanResult}
-                plcData={plcData}
-              />
+            {/* Desktop side-by-side or Mobile toggled views */}
+            <div className="flex-1 flex flex-col lg:flex-row gap-3 overflow-hidden">
+              {/* Left: Hardware Trainer */}
+              <div className={`w-full lg:w-[410px] shrink-0 flex-col overflow-y-auto ${
+                mobileView === 'bench' ? 'flex flex-1' : 'hidden lg:flex'
+              }`}>
+                <HardwareTrainer
+                  plcData={plcData}
+                  onToggleInput={handleToggleInput}
+                  isRunning={isRunning}
+                />
+              </div>
+
+              {/* Right: Ladder Editor */}
+              <div className={`flex-1 flex-col overflow-hidden min-w-0 ${
+                mobileView === 'ladder' ? 'flex' : 'hidden lg:flex'
+              }`}>
+                <LadderEditor
+                  rungs={currentRungs}
+                  onChangeRungs={setCurrentRungs}
+                  scanResult={scanResult}
+                  plcData={plcData}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -205,7 +251,16 @@ export function App() {
         )}
       </div>
 
-      {/* 3. Interactive Tutorial & Help Modal */}
+      {/* 3. Live Bit Monitor / Data Table Drawer */}
+      <BitMonitorDrawer
+        isOpen={isBitMonitorOpen}
+        onClose={() => setIsBitMonitorOpen(false)}
+        plcData={plcData}
+        onToggleInput={handleToggleInput}
+        onSetRegister={handleSetRegister}
+      />
+
+      {/* 4. Interactive Tutorial & Help Modal */}
       <TutorialModal
         isOpen={isHelpOpen}
         onClose={() => setIsHelpOpen(false)}

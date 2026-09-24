@@ -20,6 +20,15 @@ export function InstructionPalette({
     { type: 'BRANCH', symbol: '──╵─+─╷──', name: 'Branch Wire', desc: 'Parallel Branch (OR Logic)', isBranch: true }
   ];
 
+  const mathInstructions = [
+    { type: 'ADD', symbol: '[ADD]', name: 'ADD', desc: 'Add: Dest = Source A + Source B', isOutput: true, isBlock: true },
+    { type: 'SUB', symbol: '[SUB]', name: 'SUB', desc: 'Subtract: Dest = Source A - Source B', isOutput: true, isBlock: true },
+    { type: 'MUL', symbol: '[MUL]', name: 'MUL', desc: 'Multiply: Dest = Source A * Source B', isOutput: true, isBlock: true },
+    { type: 'DIV', symbol: '[DIV]', name: 'DIV', desc: 'Divide: Dest = Source A / Source B', isOutput: true, isBlock: true },
+    { type: 'MOV', symbol: '[MOV]', name: 'MOV', desc: 'Move Register Value to Dest', isOutput: true, isBlock: true },
+    { type: 'EQU', symbol: '[EQU]', name: 'EQU', desc: 'Equal: Compare Source A == Source B', isOutput: false, isBlock: true }
+  ];
+
   const inputs = [
     { addr: 'I:0/0', label: 'Switch 1 (I:0/0)', desc: 'Toggle Switch 1', color: 'border-emerald-600/50 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60' },
     { addr: 'I:0/1', label: 'Switch 2 (I:0/1)', desc: 'Toggle Switch 2', color: 'border-emerald-600/50 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60' },
@@ -45,7 +54,9 @@ export function InstructionPalette({
     { addr: 'T4:0.DN', label: 'T4:0.DN', desc: 'Timer 0 Done Bit', color: 'border-purple-600/50 bg-purple-950/40 text-purple-300 hover:bg-purple-900/60' },
     { addr: 'T4:0.TT', label: 'T4:0.TT', desc: 'Timer 0 Timing Bit', color: 'border-purple-600/50 bg-purple-950/40 text-purple-300 hover:bg-purple-900/60' },
     { addr: 'T4:0.EN', label: 'T4:0.EN', desc: 'Timer 0 Enable Bit', color: 'border-purple-600/50 bg-purple-950/40 text-purple-300 hover:bg-purple-900/60' },
-    { addr: 'N7:1', label: 'N7:1', desc: 'Sequence Step Register', color: 'border-indigo-600/50 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/60' }
+    { addr: 'N7:0', label: 'N7:0 (Reg)', desc: 'Integer Register 0', color: 'border-indigo-600/50 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/60' },
+    { addr: 'N7:1', label: 'N7:1 (Reg)', desc: 'Integer Register 1', color: 'border-indigo-600/50 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/60' },
+    { addr: 'N7:2', label: 'N7:2 (Reg)', desc: 'Integer Register 2', color: 'border-indigo-600/50 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/60' }
   ];
 
   const handleDragStart = (e, dragData) => {
@@ -57,13 +68,14 @@ export function InstructionPalette({
     <div id="tour-palette" className="bg-slate-950/90 border-b border-slate-800 p-2.5 flex flex-col gap-2 select-none shadow-sm">
       {/* Category Tabs */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 overflow-x-auto">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
           {[
             { id: 'instructions', label: 'Bit Instructions' },
+            { id: 'math', label: 'Math & Compute' },
             { id: 'inputs', label: 'Inputs (I:0)' },
             { id: 'outputs', label: 'Outputs (O:0)' },
             { id: 'binary', label: 'Internal Relay (B3)' },
-            { id: 'timers', label: 'Timers & Memory' }
+            { id: 'timers', label: 'Timers & Registers' }
           ].map(cat => (
             <button
               key={cat.id}
@@ -104,6 +116,25 @@ export function InstructionPalette({
                 title={`${inst.desc} — Click to add or drag onto rung`}
               >
                 <span className="font-extrabold text-cyan-400 group-hover:scale-105 transition-transform">{inst.symbol}</span>
+                <span className="text-xs font-sans font-semibold text-slate-300">{inst.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 2. Math & Compute Instructions */}
+        {activeCategory === 'math' && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {mathInstructions.map(inst => (
+              <button
+                key={inst.type}
+                draggable
+                onDragStart={(e) => handleDragStart(e, { kind: 'instruction', type: inst.type, isOutput: inst.isOutput, isBlock: true })}
+                onClick={() => onAddInstruction(inst.type)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-indigo-700/70 bg-indigo-950/40 hover:bg-indigo-900/60 text-slate-200 font-mono text-xs cursor-pointer shadow-sm transition active:scale-95 group"
+                title={`${inst.desc} — Click to add or drag onto rung`}
+              >
+                <span className="font-extrabold text-indigo-400 group-hover:scale-105 transition-transform">{inst.symbol}</span>
                 <span className="text-xs font-sans font-semibold text-slate-300">{inst.name}</span>
               </button>
             ))}

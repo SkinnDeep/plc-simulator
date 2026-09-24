@@ -70,7 +70,7 @@ export function validateLadderLogic(rungs) {
         return;
       }
 
-      const isOut = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV'].includes(item.type);
+      const isOut = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
       if (isOut) hasOutput = true;
       else hasInput = true;
 

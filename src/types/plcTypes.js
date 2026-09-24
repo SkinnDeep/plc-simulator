@@ -15,6 +15,10 @@ export const INSTRUCTION_TYPES = {
   RES: 'RES', // Reset Timer
   EQU: 'EQU', // Equal
   MOV: 'MOV', // Move
+  ADD: 'ADD', // Add Math Box
+  SUB: 'SUB', // Subtract Math Box
+  MUL: 'MUL', // Multiply Math Box
+  DIV: 'DIV', // Divide Math Box
   BRANCH: 'BRANCH', // Parallel branch
   SPLIT: 'SPLIT' // Parallel split branch
 };
@@ -29,6 +33,10 @@ export const INSTRUCTION_METADATA = {
   RES: { name: 'RES', symbol: '-(RES)-', desc: 'Reset Timer', category: 'Timer', isOutput: true },
   EQU: { name: 'EQU', symbol: '[EQU]', desc: 'Equal (Compare Value)', category: 'Compare', isBlock: true },
   MOV: { name: 'MOV', symbol: '[MOV]', desc: 'Move Register Value', category: 'Move', isBlock: true, isOutput: true },
+  ADD: { name: 'ADD', symbol: '[ADD]', desc: 'Math: Add (Dest = Source A + Source B)', category: 'Math', isBlock: true, isOutput: true },
+  SUB: { name: 'SUB', symbol: '[SUB]', desc: 'Math: Subtract (Dest = Source A - Source B)', category: 'Math', isBlock: true, isOutput: true },
+  MUL: { name: 'MUL', symbol: '[MUL]', desc: 'Math: Multiply (Dest = Source A * Source B)', category: 'Math', isBlock: true, isOutput: true },
+  DIV: { name: 'DIV', symbol: '[DIV]', desc: 'Math: Divide (Dest = Source A / Source B)', category: 'Math', isBlock: true, isOutput: true },
   BRANCH: { name: 'Branch', symbol: '[+]', desc: 'Parallel Branch (OR logic)', category: 'Structure' },
   SPLIT: { name: 'Split Branch', symbol: '[+]', desc: 'Parallel Split Branch (OR logic)', category: 'Structure' }
 };

@@ -83,23 +83,39 @@ export function LadderEditor({
     setSelectedItemId(null);
   };
 
+  const isOutputInstruction = (type) => ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(type);
+
   // Add instruction (from palette click or drop)
   const handleAddInstructionToRung = (rungIdx, type, defaultAddr = null) => {
     const rung = rungs[rungIdx];
     if (!rung) return;
 
-    const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV'].includes(type);
+    const isOutput = isOutputInstruction(type);
     let operand = defaultAddr;
     if (!operand) {
-      operand = isOutput ? 'O:0/0' : 'I:0/0';
+      if (['ADD', 'SUB', 'MUL', 'DIV', 'MOV'].includes(type)) {
+        operand = 'N7:0';
+      } else if (type === 'TON' || type === 'RES') {
+        operand = 'T4:0';
+      } else {
+        operand = isOutput ? 'O:0/0' : 'I:0/0';
+      }
+    }
+
+    let params = {};
+    if (type === 'TON') params = { pre: 2.0, timeBase: 1.0 };
+    else if (['ADD', 'SUB', 'MUL', 'DIV'].includes(type)) {
+      params = { sourceA: 'N7:0', sourceB: '1', dest: 'N7:1' };
+    } else if (type === 'MOV') {
+      params = { source: 'N7:0', dest: 'N7:1' };
     }
 
     const newItem = {
       id: `elem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       type,
       operand,
-      params: type === 'TON' ? { pre: 2.0 } : {},
-      desc: isOutput ? 'Output Coil' : 'Input Contact'
+      params,
+      desc: isOutput ? 'Output / Compute' : 'Input Contact'
     };
 
     const nextItems = [...rung.items];
@@ -107,7 +123,7 @@ export function LadderEditor({
       nextItems.push(newItem);
     } else {
       // Insert contact before outputs if any exist
-      const firstOutIdx = nextItems.findIndex(it => ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV'].includes(it.type));
+      const firstOutIdx = nextItems.findIndex(it => isOutputInstruction(it.type));
       if (firstOutIdx >= 0) {
         nextItems.splice(firstOutIdx, 0, newItem);
       } else {
@@ -137,7 +153,7 @@ export function LadderEditor({
     };
 
     const nextItems = [...rung.items];
-    const firstOutIdx = nextItems.findIndex(it => ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV'].includes(it.type));
+    const firstOutIdx = nextItems.findIndex(it => isOutputInstruction(it.type));
     if (firstOutIdx >= 0) {
       nextItems.splice(firstOutIdx, 0, newBranch);
     } else {
@@ -452,11 +468,11 @@ export function LadderEditor({
           if (!currRung) return;
           const cloned = cloneItemWithNewIds(clipboard.data);
           const nextItems = [...(currRung.items || [])];
-          const isOut = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV'].includes(cloned.type);
+          const isOut = isOutputInstruction(cloned.type);
           if (isOut) {
             nextItems.push(cloned);
           } else {
-            const firstOut = nextItems.findIndex(it => ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV'].includes(it.type));
+            const firstOut = nextItems.findIndex(it => isOutputInstruction(it.type));
             if (firstOut >= 0) nextItems.splice(firstOut, 0, cloned);
             else nextItems.push(cloned);
           }
@@ -529,8 +545,8 @@ export function LadderEditor({
         {rungs.map((rung, rIdx) => {
           const isRungSelected = selectedRungIdx === rIdx;
           const conducting = isRungActive(rung.id);
-          const inputItems = rung.items.filter(it => !['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV'].includes(it.type));
-          const outputItems = rung.items.filter(it => ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV'].includes(it.type));
+          const inputItems = rung.items.filter(it => !isOutputInstruction(it.type));
+          const outputItems = rung.items.filter(it => isOutputInstruction(it.type));
 
           return (
             <div
@@ -749,34 +765,53 @@ export function LadderEditor({
 
                   {/* Right Side: Outputs */}
                   <div className="flex items-center gap-3 relative z-10 ml-auto py-2">
-                    {outputItems.map(item => (
-                      item.type === 'TON' ? (
-                        <TimerInstructionBlock
-                          key={item.id}
-                          item={item}
-                          isSelected={selectedItemId === item.id}
-                          isActive={isElementActive(rung.id, item.id)}
-                          plcData={plcData}
-                          onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                          onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
-                          onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
-                          onDelete={() => handleDeleteItem(rIdx, item.id)}
-                          onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
-                        />
-                      ) : (
-                        <RungElementCard
-                          key={item.id}
-                          item={item}
-                          isSelected={selectedItemId === item.id}
-                          isActive={isElementActive(rung.id, item.id)}
-                          onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                          onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
-                          onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
-                          onDelete={() => handleDeleteItem(rIdx, item.id)}
-                          onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
-                        />
-                      )
-                    ))}
+                    {outputItems.map(item => {
+                      if (item.type === 'TON') {
+                        return (
+                          <TimerInstructionBlock
+                            key={item.id}
+                            item={item}
+                            isSelected={selectedItemId === item.id}
+                            isActive={isElementActive(rung.id, item.id)}
+                            plcData={plcData}
+                            onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
+                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                            onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
+                            onDelete={() => handleDeleteItem(rIdx, item.id)}
+                            onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
+                          />
+                        );
+                      } else if (['ADD', 'SUB', 'MUL', 'DIV'].includes(item.type)) {
+                        return (
+                          <MathInstructionBlock
+                            key={item.id}
+                            item={item}
+                            isSelected={selectedItemId === item.id}
+                            isActive={isElementActive(rung.id, item.id)}
+                            plcData={plcData}
+                            onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
+                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                            onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
+                            onDelete={() => handleDeleteItem(rIdx, item.id)}
+                            onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
+                          />
+                        );
+                      } else {
+                        return (
+                          <RungElementCard
+                            key={item.id}
+                            item={item}
+                            isSelected={selectedItemId === item.id}
+                            isActive={isElementActive(rung.id, item.id)}
+                            onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
+                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                            onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
+                            onDelete={() => handleDeleteItem(rIdx, item.id)}
+                            onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
+                          />
+                        );
+                      }
+                    })}
 
                     {/* Button / Drop Zone: Add Output */}
                     <div
@@ -889,7 +924,7 @@ function RungElementCard({
   onBranchAround
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV'].includes(item.type);
+  const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
 
   return (
     <div
@@ -944,6 +979,12 @@ function RungElementCard({
         {item.type === 'OTU' && '-(U)-'}
         {item.type === 'TON' && '[TON]'}
         {item.type === 'RES' && '-(RES)-'}
+        {item.type === 'MOV' && '[MOV]'}
+        {item.type === 'EQU' && '[EQU]'}
+        {item.type === 'ADD' && '[ADD]'}
+        {item.type === 'SUB' && '[SUB]'}
+        {item.type === 'MUL' && '[MUL]'}
+        {item.type === 'DIV' && '[DIV]'}
       </div>
 
       {/* Target Address Card (Clickable to change address!) */}
@@ -1154,4 +1195,167 @@ function TimerInstructionBlock({
     </div>
   );
 }
+
+// RSLogix 500 Math Instruction Block (ADD, SUB, MUL, DIV)
+function MathInstructionBlock({
+  item,
+  isSelected,
+  isActive,
+  plcData,
+  onSelect,
+  onOpenPicker,
+  onUpdate,
+  onDelete,
+  onDropItem
+}) {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const type = item.type || 'ADD';
+  const operand = item.operand || 'N7:0';
+  const params = item.params || {};
+
+  const sourceA = params.sourceA !== undefined ? params.sourceA : operand;
+  const sourceB = params.sourceB !== undefined ? params.sourceB : '1';
+  const dest = params.dest || operand || 'N7:1';
+
+  // Helper to resolve live display value
+  const getDisplayVal = (addrOrNum) => {
+    if (addrOrNum === undefined || addrOrNum === null) return 0;
+    const s = String(addrOrNum).trim();
+    if (/^-?\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+    if (s.startsWith('N7:')) {
+      const idx = parseInt(s.replace('N7:', ''), 10);
+      return plcData?.N7?.[idx] ?? 0;
+    }
+    if (s.startsWith('T4:')) {
+      const match = s.match(/^T4:(\d+)\.([A-Z]+)$/);
+      if (match) {
+        const tIdx = parseInt(match[1], 10);
+        const field = match[2];
+        const timer = plcData?.T4?.[tIdx];
+        if (timer && field === 'ACC') return Math.round(timer.ACC);
+        if (timer && field === 'PRE') return timer.PRE;
+      }
+    }
+    return plcData?.bits?.[s] ? 1 : 0;
+  };
+
+  const valA = getDisplayVal(sourceA);
+  const valB = getDisplayVal(sourceB);
+  const destVal = getDisplayVal(dest);
+
+  const titles = {
+    ADD: 'Add',
+    SUB: 'Subtract',
+    MUL: 'Multiply',
+    DIV: 'Divide'
+  };
+
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(e) => { setIsDragOver(false); onDropItem(e); }}
+      className="flex items-center relative select-none cursor-pointer py-1"
+    >
+      {/* Input Conductor Line */}
+      <div className={`w-3.5 h-1 ${isActive ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-slate-600'}`} />
+
+      {/* Math Block Frame */}
+      <div
+        className={`relative rounded border-2 px-3.5 pt-3 pb-2.5 min-w-[210px] font-mono shadow-xl transition-all duration-150 ${
+          isDragOver
+            ? 'ring-4 ring-emerald-400 border-emerald-300 bg-emerald-950/80 scale-102'
+            : isSelected
+              ? 'ring-2 ring-cyan-400 border-cyan-400 bg-slate-900 shadow-[0_0_18px_rgba(6,182,212,0.4)]'
+              : isActive
+                ? 'border-emerald-500 bg-slate-900 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
+                : 'border-indigo-500 bg-slate-950 hover:border-indigo-400'
+        }`}
+      >
+        {/* Top Header Broken Line with Type */}
+        <div className="absolute -top-3 left-5 px-2 py-0.5 bg-slate-900 border border-indigo-500/70 rounded text-indigo-300 font-extrabold text-xs tracking-wider flex items-center gap-1 shadow-sm">
+          <span>{type}</span>
+        </div>
+
+        {/* Delete Button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="absolute top-1.5 right-1.5 p-1 text-slate-500 hover:text-red-400 rounded transition cursor-pointer"
+          title={`Delete ${type} Block`}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Title */}
+        <div className="text-[12px] font-sans font-bold text-indigo-300 mb-2">
+          {titles[type] || 'Compute'}
+        </div>
+
+        {/* Rows: Source A, Source B, Dest */}
+        <div className="space-y-1.5 text-xs font-mono">
+          {/* Source A */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-slate-400 font-medium text-[11px]">Source A</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={sourceA}
+                onChange={(e) => onUpdate({ params: { ...params, sourceA: e.target.value } })}
+                onClick={(e) => e.stopPropagation()}
+                className="w-16 bg-slate-900 border border-slate-700 focus:border-cyan-400 rounded px-1.5 py-0.5 text-right font-bold text-white text-[11px]"
+                title="Source A operand or constant"
+              />
+              <span className="text-[10px] text-cyan-400 font-bold px-1 rounded bg-slate-800">
+                &lt; {valA} &gt;
+              </span>
+            </div>
+          </div>
+
+          {/* Source B */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-slate-400 font-medium text-[11px]">Source B</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={sourceB}
+                onChange={(e) => onUpdate({ params: { ...params, sourceB: e.target.value } })}
+                onClick={(e) => e.stopPropagation()}
+                className="w-16 bg-slate-900 border border-slate-700 focus:border-cyan-400 rounded px-1.5 py-0.5 text-right font-bold text-white text-[11px]"
+                title="Source B operand or constant"
+              />
+              <span className="text-[10px] text-cyan-400 font-bold px-1 rounded bg-slate-800">
+                &lt; {valB} &gt;
+              </span>
+            </div>
+          </div>
+
+          {/* Dest */}
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800">
+            <span className="text-indigo-400 font-bold text-[11px]">Dest</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={dest}
+                onChange={(e) => onUpdate({ operand: e.target.value, params: { ...params, dest: e.target.value } })}
+                onClick={(e) => e.stopPropagation()}
+                className="w-16 bg-slate-900 border border-slate-700 focus:border-cyan-400 rounded px-1.5 py-0.5 text-right font-bold text-amber-300 text-[11px]"
+                title="Destination Register (e.g. N7:0)"
+              />
+              <span className={`text-[10px] font-bold px-1.5 rounded ${
+                isActive ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'bg-slate-800 text-slate-400'
+              }`}>
+                &lt; {destVal} &gt;
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Output Conductor Line to Right */}
+      <div className={`w-3.5 h-1 ${isActive ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-slate-600'}`} />
+    </div>
+  );
+}
+
 export default LadderEditor;

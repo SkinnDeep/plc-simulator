@@ -38,6 +38,29 @@ git push -u origin main
 
 ---
 
+## 🔄 How to Push Future Updates (Whenever You Make Changes)
+
+Whenever you add new ladder logic, features, or tweaks, updating your live GitHub Pages site takes just 3 commands:
+
+```bash
+cd "C:\Users\funny\.gemini\antigravity\scratch\rslogix-plc-simulator"
+
+# 1. Stage all your changes
+git add .
+
+# 2. Commit with a descriptive message
+git commit -m "Add math functions, 1/0 bit monitor drawer, and mobile support"
+
+# 3. Push to GitHub
+git push
+```
+
+**What happens next?**
+- GitHub Actions automatically catches your push, builds the production app with Vite, and updates your live GitHub Pages site within 60–90 seconds.
+- You don't have to rebuild or configure anything manually!
+
+---
+
 ## 🛠 Manual Alternative: Deploying Pre-built `dist/`
 If you prefer not using GitHub Actions:
 1. Run `npm run build` locally.
