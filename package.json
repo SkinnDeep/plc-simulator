@@ -1,0 +1,23 @@
+{
+  "name": "rslogix-plc-simulator",
+  "version": "1.0.0",
+  "description": "Modern RSLogix 500 PLC Simulator with Hardware Trainer and Interactive Learning Lab",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.4",
+    "lucide-react": "^1.48.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4.0.0",
+    "vite": "^8.3.1"
+  }
+}
