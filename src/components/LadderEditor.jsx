@@ -35,7 +35,11 @@ export function LadderEditor({
   rungs,
   onChangeRungs,
   scanResult,
-  plcData
+  plcData,
+  onUndo,
+  onRedo,
+  isRunning,
+  logicIssues
 }) {
   const [selectedRungIdx, setSelectedRungIdx] = useState(0);
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -43,9 +47,11 @@ export function LadderEditor({
   const [dragOverTarget, setDragOverTarget] = useState(null);
   const [addressPickerTarget, setAddressPickerTarget] = useState(null); // { rungIdx, itemId }
 
-  // Diagnostics validation
-  const logicIssues = validateLadderLogic(rungs);
-  const hasErrors = logicIssues.some(i => i.severity === 'error');
+  const [isBranchMode, setIsBranchMode] = useState(false);
+  const [branchStartNode, setBranchStartNode] = useState(null);
+
+  // Diagnostics validation passed from App via logicIssues
+  const hasErrors = logicIssues?.some(i => i.severity === 'error');
 
   const isElementActive = (rungId, elemId) => {
     if (!scanResult?.rungEvaluations) return false;
@@ -87,6 +93,8 @@ export function LadderEditor({
 
   // Add instruction (from palette click or drop)
   const handleAddInstructionToRung = (rungIdx, type, defaultAddr = null) => {
+    setIsBranchMode(false);
+    setBranchStartNode(null);
     const rung = rungs[rungIdx];
     if (!rung) return;
 
@@ -137,33 +145,48 @@ export function LadderEditor({
     setSelectedItemId(newItem.id);
   };
 
-  // Add parallel branch block to rung
-  const handleAddBranchToRung = (rungIdx) => {
-    const rung = rungs[rungIdx];
-    if (!rung) return;
+  const handleNodeClick = (rungIdx, itemIdx) => {
+    if (!isBranchMode) return;
+    if (!branchStartNode) {
+      setBranchStartNode({ rungIdx, itemIdx });
+    } else {
+      if (branchStartNode.rungIdx === rungIdx) {
+        handleCreateBranchSpan(rungIdx, branchStartNode.itemIdx, itemIdx);
+      }
+      setBranchStartNode(null);
+      setIsBranchMode(false);
+    }
+  };
 
-    const branchId = `branch_${Date.now()}`;
+  const handleCreateBranchSpan = (rungIdx, idxA, idxB) => {
+    const startIdx = Math.min(idxA, idxB);
+    const endIdx = Math.max(idxA, idxB);
+    const rung = rungs[rungIdx];
+    if (!rung || startIdx >= endIdx) return;
+    
+    const nextItems = [...rung.items];
+    const inputs = nextItems.filter(it => !isOutputInstruction(it.type));
+    const outputs = nextItems.filter(it => isOutputInstruction(it.type));
+    
+    const branchItems = inputs.slice(startIdx, endIdx);
     const newBranch = {
-      id: branchId,
+      id: `branch_${Date.now()}`,
       type: 'BRANCH',
       branches: [
-        [{ id: `b1_${Date.now()}`, type: 'XIC', operand: 'I:0/2', desc: 'Start PB' }],
-        [{ id: `b2_${Date.now()}`, type: 'XIC', operand: 'O:0/0', desc: 'Seal-In' }]
+        branchItems,
+        [] // Empty bottom branch ready for elements
       ]
     };
-
-    const nextItems = [...rung.items];
-    const firstOutIdx = nextItems.findIndex(it => isOutputInstruction(it.type));
-    if (firstOutIdx >= 0) {
-      nextItems.splice(firstOutIdx, 0, newBranch);
-    } else {
-      nextItems.push(newBranch);
-    }
-
+    
+    const newInputs = [
+      ...inputs.slice(0, startIdx),
+      newBranch,
+      ...inputs.slice(endIdx)
+    ];
+    
     const nextRungs = [...rungs];
-    nextRungs[rungIdx] = { ...rung, items: nextItems };
+    nextRungs[rungIdx] = { ...rung, items: [...newInputs, ...outputs] };
     onChangeRungs(nextRungs);
-    setSelectedItemId(branchId);
   };
 
   // Wrap a specific contact into a parallel branch
@@ -206,8 +229,6 @@ export function LadderEditor({
     nextRungs[rungIdx] = { ...rung, items: wrapList(rung.items) };
     onChangeRungs(nextRungs);
   };
-
-  // Add contact inside a branch path
   const handleAddContactToBranchPath = (rungIdx, branchId, pathIdx, addr = 'I:0/0') => {
     const rung = rungs[rungIdx];
     if (!rung) return;
@@ -352,7 +373,7 @@ export function LadderEditor({
 
       if (data.kind === 'instruction') {
         if (data.isBranch || data.type === 'BRANCH' || data.type === 'SPLIT') {
-          handleAddBranchToRung(rungIdx);
+          // ignore drop for branch
         } else {
           handleAddInstructionToRung(rungIdx, data.type);
         }
@@ -490,21 +511,59 @@ export function LadderEditor({
         }
         return;
       }
+      // Ctrl + Z (Undo)
+      if (cmdOrCtrl && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        onUndo?.();
+        return;
+      }
+
+      // Ctrl + Y or Ctrl + Shift + Z (Redo)
+      if ((cmdOrCtrl && (e.key === 'y' || e.key === 'Y')) || (cmdOrCtrl && e.shiftKey && (e.key === 'z' || e.key === 'Z'))) {
+        e.preventDefault();
+        onRedo?.();
+        return;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemId, selectedRungIdx, rungs, clipboard]);
+  }, [selectedItemId, selectedRungIdx, rungs, clipboard, onUndo, onRedo]);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col flex-1 focus:outline-none">
+    <div className="bg-[#1e1e1e] border border-[#2d2d2d] overflow-hidden shadow-xl flex flex-col flex-1 focus:outline-none h-full">
       {/* 1. Categorized Instruction & I/O Palette */}
-      <InstructionPalette
-        onAddInstruction={(type) => handleAddInstructionToRung(selectedRungIdx, type)}
-        onAddBranch={() => handleAddBranchToRung(selectedRungIdx)}
-        onSelectIoToken={handlePaletteSelectIo}
-        hasSelection={!!selectedItemId}
-      />
+      <div className="relative">
+        <InstructionPalette
+          onAddInstruction={(type) => handleAddInstructionToRung(selectedRungIdx, type)}
+          isBranchMode={isBranchMode}
+          onToggleBranchMode={() => {
+            setIsBranchMode(!isBranchMode);
+            setBranchStartNode(null);
+          }}
+          onSelectIoToken={handlePaletteSelectIo}
+          hasSelection={!!selectedItemId}
+        />
+        {isRunning && <div className="absolute inset-0 bg-slate-900/40 z-50 cursor-not-allowed" title="Stop the program to edit logic" />}
+      </div>
+
+      {/* Branch Mode Instructional Banner */}
+      {isBranchMode && (
+        <div className="bg-blue-900/60 border-b border-blue-500/50 text-blue-200 px-4 py-1.5 text-xs font-mono flex items-center justify-center gap-2 shadow-inner shrink-0 z-10 relative">
+          <GitFork className="w-4 h-4 text-blue-400 animate-pulse" />
+          <span className="font-semibold tracking-wide">
+            {branchStartNode 
+              ? "Branch start selected. Now click a second dot to complete the parallel branch." 
+              : "Branch Mode: Click any dot on the wires to set the start point of your parallel branch."}
+          </span>
+          <button 
+            onClick={() => { setIsBranchMode(false); setBranchStartNode(null); }}
+            className="ml-4 px-2 py-0.5 rounded-md bg-blue-950/80 border border-blue-700 hover:border-blue-400 hover:text-white text-blue-300 transition cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* 2. Canvas Header Bar */}
       <div className="bg-slate-950/80 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between">
@@ -528,20 +587,95 @@ export function LadderEditor({
           )}
         </div>
 
-        {/* Prominent Add Rung Button */}
-        <button
-          id="tour-add-rung"
-          onClick={handleAddRung}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow-md transition active:scale-95 cursor-pointer"
-          title="Add a new blank rung to the ladder program"
-        >
-          <Plus className="w-4 h-4 stroke-[3]" />
-          <span>Add Rung</span>
-        </button>
+        {/* Utility Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const fileInput = document.createElement('input');
+              fileInput.type = 'file';
+              fileInput.accept = '.json';
+              fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                  try {
+                    const loaded = JSON.parse(event.target.result);
+                    if (Array.isArray(loaded)) onChangeRungs(loaded);
+                  } catch (err) {
+                    alert('Invalid JSON file.');
+                  }
+                };
+                reader.readAsText(file);
+              };
+              fileInput.click();
+            }}
+            disabled={isRunning}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition ${isRunning ? 'opacity-50 cursor-not-allowed border-slate-700 text-slate-500 bg-transparent' : 'border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white cursor-pointer'}`}
+            title="Import logic from JSON"
+          >
+            Import
+          </button>
+          
+          <button
+            onClick={() => {
+              const blob = new Blob([JSON.stringify(rungs, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'ladder_logic.json';
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white text-xs font-bold transition cursor-pointer"
+            title="Export logic to JSON"
+          >
+            Export
+          </button>
+
+          <div className="w-[1px] h-5 bg-slate-700 mx-1" />
+
+          <button
+            onClick={() => {
+              if (window.confirm("Are you sure you want to clear all rungs? This cannot be undone.")) {
+                onChangeRungs([{ id: `r_${Date.now()}`, comment: 'Rung 000: Control logic', items: [] }]);
+              }
+            }}
+            disabled={isRunning}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition ${isRunning ? 'opacity-50 cursor-not-allowed border-slate-700 text-slate-500 bg-transparent' : 'border-red-900/50 text-red-400 hover:bg-red-950 hover:text-red-300 cursor-pointer'}`}
+            title="Clear all rungs"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Clear Rungs</span>
+          </button>
+
+          <button
+            id="tour-add-rung"
+            onClick={handleAddRung}
+            disabled={isRunning}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold text-xs shadow-md transition ${isRunning ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-500' : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 active:scale-95 cursor-pointer'}`}
+            title="Add a new blank rung to the ladder program"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Add Rung</span>
+          </button>
+        </div>
       </div>
 
       {/* 3. Ladder Rungs Canvas Container */}
-      <div id="tour-rungs" className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-950/60">
+      <div id="tour-rungs" className={`flex-1 p-4 overflow-y-auto space-y-4 transition-all relative ${isRunning ? 'bg-slate-900/90 grayscale-[0.3]' : 'bg-slate-950/60'}`}>
+        {isRunning && (
+          <div className="sticky top-0 z-50 flex justify-center mb-4 pointer-events-none">
+            <div className="bg-amber-500 text-slate-950 font-bold text-xs px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-slate-950 animate-pulse" />
+              PROGRAM IS RUNNING - STOP TO MAKE EDITS
+            </div>
+          </div>
+        )}
+        
+        {/* If running, block all clicks with an invisible overlay */}
+        {isRunning && <div className="absolute inset-0 z-40" />}
+
         {rungs.map((rung, rIdx) => {
           const isRungSelected = selectedRungIdx === rIdx;
           const conducting = isRungActive(rung.id);
@@ -622,113 +756,140 @@ export function LadderEditor({
                   }`} />
 
                   {/* Left Side: Inputs & Parallel Branches */}
-                  <div className="flex items-center gap-3 relative z-10 flex-wrap py-2">
-                    {inputItems.map(item => {
+                  <div className="flex items-center gap-1 relative z-10 flex-wrap py-2">
+                    {inputItems.map((item, idx) => {
                       if (item.type === 'BRANCH' || item.type === 'SPLIT') {
                         const branchActive = isElementActive(rung.id, item.id);
                         return (
-                          <div
-                            key={item.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedRungIdx(rIdx);
-                              setSelectedItemId(item.id);
-                            }}
-                            className={`flex items-stretch border-2 rounded-xl p-2.5 transition-all shadow-md relative ${
-                              selectedItemId === item.id
-                                ? 'ring-2 ring-cyan-400 border-cyan-400 bg-cyan-950/40'
-                                : branchActive
-                                  ? 'border-emerald-500/80 bg-emerald-950/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                                  : 'border-indigo-500/60 bg-indigo-950/30'
-                            }`}
-                          >
-                            {/* Left Branch Rail (Vertical Tie) */}
-                            <div className="flex flex-col items-center justify-between mr-2 py-1">
-                              <span className="text-[10px] text-indigo-400 font-bold">┌</span>
-                              <div className={`w-1 flex-1 rounded-full ${branchActive ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
-                              <span className="text-[10px] text-indigo-400 font-bold">└</span>
-                            </div>
+                          <React.Fragment key={item.id}>
+                            <WireJunctionHandle 
+  rungIdx={rIdx} 
+  itemIdx={idx} 
+  onDropJunction={handleCreateBranchSpan} 
+  isBranchMode={isBranchMode}
+  branchStartNode={branchStartNode}
+  onNodeClick={handleNodeClick}
+/>
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedRungIdx(rIdx);
+                                setSelectedItemId(item.id);
+                              }}
+                              className={`flex items-stretch border-2 rounded-xl p-2.5 transition-all shadow-md relative mx-2 ${
+                                selectedItemId === item.id
+                                  ? 'ring-2 ring-cyan-400 border-cyan-400 bg-cyan-950/40'
+                                  : branchActive
+                                    ? 'border-emerald-500/80 bg-emerald-950/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                                    : 'border-indigo-500/60 bg-indigo-950/30'
+                              }`}
+                            >
+                              {/* Left Branch Rail (Vertical Tie) */}
+                              <div className="flex flex-col items-center justify-between mr-2 py-1">
+                                <span className="text-[10px] text-indigo-400 font-bold">┌</span>
+                                <div className={`w-1 flex-1 rounded-full ${branchActive ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
+                                <span className="text-[10px] text-indigo-400 font-bold">└</span>
+                              </div>
 
-                            {/* Branch Levels */}
-                            <div className="flex flex-col gap-2.5">
-                              {item.branches.map((path, pathIdx) => (
-                                <div
-                                  key={pathIdx}
-                                  className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-900/90 border border-slate-700/60"
-                                >
-                                  <span className="text-[9px] font-mono font-bold text-indigo-300 px-1 py-0.5 rounded bg-indigo-950">
-                                    PATH {String.fromCharCode(65 + pathIdx)}
-                                  </span>
-
-                                  {path.map(subItem => (
-                                    <RungElementCard
-                                      key={subItem.id}
-                                      item={subItem}
-                                      isSelected={selectedItemId === subItem.id}
-                                      isActive={isElementActive(rung.id, subItem.id)}
-                                      onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
-                                      onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
-                                      onDelete={() => handleDeleteItem(rIdx, subItem.id)}
-                                      onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
-                                    />
-                                  ))}
-
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAddContactToBranchPath(rIdx, item.id, pathIdx);
-                                    }}
-                                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[10px] font-mono border border-slate-700 cursor-pointer transition active:scale-95"
+                              {/* Branch Levels */}
+                              <div className="flex flex-col gap-2.5">
+                                {item.branches.map((path, pathIdx) => (
+                                  <div
+                                    key={pathIdx}
+                                    className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-900/90 border border-slate-700/60"
                                   >
-                                    + Contact
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
+                                    <span className="text-[9px] font-mono font-bold text-indigo-300 px-1 py-0.5 rounded bg-indigo-950">
+                                      PATH {String.fromCharCode(65 + pathIdx)}
+                                    </span>
 
-                            {/* Right Branch Rail (Vertical Tie) */}
-                            <div className="flex flex-col items-center justify-between ml-2 py-1">
-                              <span className="text-[10px] text-indigo-400 font-bold">┐</span>
-                              <div className={`w-1 flex-1 rounded-full ${branchActive ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
-                              <span className="text-[10px] text-indigo-400 font-bold">┘</span>
-                            </div>
+                                    {path.map(subItem => (
+                                      <RungElementCard
+                                        key={subItem.id}
+                                        item={subItem}
+                                        isSelected={selectedItemId === subItem.id}
+                                        isActive={isElementActive(rung.id, subItem.id)}
+                                        onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
+                                        onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                        onDelete={() => handleDeleteItem(rIdx, subItem.id)}
+                                        onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
+                                      />
+                                    ))}
 
-                            {/* Branch Controls */}
-                            <div className="flex flex-col justify-between ml-1.5">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteItem(rIdx, item.id); }}
-                                className="text-slate-500 hover:text-red-400 p-0.5 rounded transition cursor-pointer"
-                                title="Delete Parallel Branch"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleAddLevelToBranch(rIdx, item.id); }}
-                                className="text-indigo-400 hover:text-indigo-200 text-[10px] font-mono p-0.5"
-                                title="Add 3rd parallel path"
-                              >
-                                +Level
-                              </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAddContactToBranchPath(rIdx, item.id, pathIdx);
+                                      }}
+                                      className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[10px] font-mono border border-slate-700 cursor-pointer transition active:scale-95"
+                                    >
+                                      + Contact
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Right Branch Rail (Vertical Tie) */}
+                              <div className="flex flex-col items-center justify-between ml-2 py-1">
+                                <span className="text-[10px] text-indigo-400 font-bold">┐</span>
+                                <div className={`w-1 flex-1 rounded-full ${branchActive ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
+                                <span className="text-[10px] text-indigo-400 font-bold">┘</span>
+                              </div>
+
+                              {/* Branch Controls */}
+                              <div className="flex flex-col justify-between ml-1.5">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteItem(rIdx, item.id); }}
+                                  className="text-slate-500 hover:text-red-400 p-0.5 rounded transition cursor-pointer"
+                                  title="Delete Parallel Branch"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleAddLevelToBranch(rIdx, item.id); }}
+                                  className="text-indigo-400 hover:text-indigo-200 text-[10px] font-mono p-0.5"
+                                  title="Add 3rd parallel path"
+                                >
+                                  +Level
+                                </button>
+                              </div>
                             </div>
-                          </div>
+                          </React.Fragment>
                         );
                       }
 
                       return (
-                        <div key={item.id} className="relative group">
-                          <RungElementCard
-                            item={item}
-                            isSelected={selectedItemId === item.id}
-                            isActive={isElementActive(rung.id, item.id)}
-                            onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
-                            onDelete={() => handleDeleteItem(rIdx, item.id)}
-                            onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
-                            onBranchAround={() => handleBranchAroundItem(rIdx, item.id)}
-                          />
-                        </div>
+                        <React.Fragment key={item.id}>
+                          <WireJunctionHandle 
+  rungIdx={rIdx} 
+  itemIdx={idx} 
+  onDropJunction={handleCreateBranchSpan} 
+  isBranchMode={isBranchMode}
+  branchStartNode={branchStartNode}
+  onNodeClick={handleNodeClick}
+/>
+                          <div className="relative group mx-1">
+                            <RungElementCard
+                              item={item}
+                              isSelected={selectedItemId === item.id}
+                              isActive={isElementActive(rung.id, item.id)}
+                              onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
+                              onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                              onDelete={() => handleDeleteItem(rIdx, item.id)}
+                              onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
+                              onBranchAround={() => handleBranchAroundItem(rIdx, item.id)}
+                            />
+                          </div>
+                        </React.Fragment>
                       );
                     })}
+                    <WireJunctionHandle 
+  rungIdx={rIdx} 
+  itemIdx={inputItems.length} 
+  onDropJunction={handleCreateBranchSpan} 
+  isBranchMode={isBranchMode}
+  branchStartNode={branchStartNode}
+  onNodeClick={handleNodeClick}
+/>
 
                     {/* Button / Drop Zone: Add Contact */}
                     <div
@@ -745,21 +906,6 @@ export function LadderEditor({
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Contact</span>
-                    </div>
-
-                    {/* Button / Drop Zone: Add Branch */}
-                    <div
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'instruction', type: 'BRANCH', isBranch: true }));
-                        e.dataTransfer.effectAllowed = 'copyMove';
-                      }}
-                      onClick={() => handleAddBranchToRung(rIdx)}
-                      className="px-3 py-2.5 rounded-xl border border-indigo-700/80 bg-indigo-950/40 hover:border-indigo-400 text-indigo-300 text-xs font-mono flex items-center gap-1.5 transition cursor-pointer active:scale-95"
-                      title="Click to add parallel branch (OR logic / motor seal-in)"
-                    >
-                      <GitFork className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>+ Branch</span>
                     </div>
                   </div>
 
@@ -911,67 +1057,32 @@ export function LadderEditor({
   );
 }
 
-// Single Instruction Card
-function RungElementCard({
-  item,
-  isSelected,
-  isActive,
-  onSelect,
-  onOpenPicker,
-  onUpdate,
-  onDelete,
-  onDropItem,
-  onBranchAround
-}) {
-  const [isDragOver, setIsDragOver] = useState(false);
+// Minimalist ISA-101 Industrial Instruction Card
+function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onDelete }) {
   const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
-
+  const color = isActive ? 'text-emerald-400' : 'text-slate-300';
+  
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-      onDragLeave={() => setIsDragOver(false)}
-      onDrop={(e) => { setIsDragOver(false); onDropItem(e); }}
-      className={`p-2.5 rounded-xl border-2 flex flex-col items-center gap-1.5 min-w-[125px] transition-all duration-150 shadow-md cursor-pointer relative ${
-        isDragOver
-          ? 'ring-4 ring-emerald-400 border-emerald-300 bg-emerald-950/80 scale-105'
-          : isSelected
-            ? 'ring-2 ring-cyan-400 border-cyan-400 bg-cyan-950/50 text-white shadow-[0_0_15px_rgba(6,182,212,0.35)]'
-            : isActive
-              ? 'bg-emerald-500 border-emerald-300 text-slate-950 shadow-[0_0_20px_#10b981]'
-              : 'bg-slate-900 border-slate-700/80 text-slate-200 hover:border-slate-500'
-      }`}
+      className="flex flex-col items-center justify-center relative select-none group px-2 cursor-pointer"
     >
-      {/* Top Header: Type & Action */}
-      <div className="w-full flex items-center justify-between border-b border-black/10 pb-1">
-        <span className={`text-[10px] font-mono font-extrabold uppercase px-1.5 py-0.2 rounded ${
-          isActive && !isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-cyan-300'
-        }`}>
-          {item.type}
-        </span>
-
-        <div className="flex items-center gap-1">
-          {onBranchAround && !isOutput && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onBranchAround(); }}
-              className="text-[9px] px-1 py-0.2 rounded bg-indigo-900/80 hover:bg-indigo-700 text-indigo-200 border border-indigo-600/50 font-mono cursor-pointer transition"
-              title="Branch parallel around this contact"
-            >
-              +Branch
-            </button>
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className={`p-0.5 rounded hover:text-red-500 cursor-pointer ${isActive && !isSelected ? 'text-slate-900' : 'text-slate-500'}`}
-            title="Delete"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
-      </div>
+      {/* Label above - Explicit Dropdown Button */}
+      <button 
+        onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
+        className={`flex items-center gap-0.5 text-[10px] font-mono mb-1 px-1.5 py-0.5 rounded border transition-colors ${
+          isActive 
+            ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300 hover:bg-emerald-800/60' 
+            : 'bg-[#2a2d34] border-slate-600/50 text-slate-300 hover:bg-[#343842] hover:border-cyan-500/50 hover:text-cyan-300'
+        }`}
+        title="Click to assign I/O address"
+      >
+        <span>{item.operand || 'Assign'}</span>
+        <ChevronDown className="w-3 h-3 opacity-70" />
+      </button>
 
       {/* Symbol */}
-      <div className="font-mono text-base font-extrabold tracking-widest my-0.5">
+      <div className={`text-base font-mono font-bold tracking-widest leading-none ${color} ${isSelected ? 'ring-1 ring-cyan-500 px-1 rounded bg-[#2a2a2a]' : ''}`}>
         {item.type === 'XIC' && '-[ ]-'}
         {item.type === 'XIO' && '-[/]-'}
         {item.type === 'OTE' && '-( )-'}
@@ -979,382 +1090,60 @@ function RungElementCard({
         {item.type === 'OTU' && '-(U)-'}
         {item.type === 'TON' && '[TON]'}
         {item.type === 'RES' && '-(RES)-'}
-        {item.type === 'MOV' && '[MOV]'}
-        {item.type === 'EQU' && '[EQU]'}
-        {item.type === 'ADD' && '[ADD]'}
-        {item.type === 'SUB' && '[SUB]'}
-        {item.type === 'MUL' && '[MUL]'}
-        {item.type === 'DIV' && '[DIV]'}
+        {['MOV', 'EQU', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type) && `[${item.type}]`}
       </div>
 
-      {/* Target Address Card (Clickable to change address!) */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
-        className={`w-full py-1 px-2 rounded-lg border text-center text-xs font-mono font-bold transition flex items-center justify-center gap-1 cursor-pointer hover:scale-102 ${
-          isActive && !isSelected
-            ? 'bg-slate-950 text-emerald-300 border-emerald-400'
-            : 'bg-slate-950 text-cyan-300 border-slate-700 hover:border-cyan-400'
-        }`}
-        title="Click to change I/O address"
-      >
-        <span>{item.operand || 'Pick Address'}</span>
-        <ChevronDown className="w-3 h-3 opacity-60" />
-      </button>
-
-      {/* Timer Preset (if TON) */}
-      {item.type === 'TON' && (
-        <div className="w-full flex items-center justify-between text-[10px] mt-0.5 pt-1 border-t border-black/10">
-          <span className="font-bold">Preset:</span>
-          <input
-            type="number"
-            min="0.5"
-            step="0.5"
-            value={item.params?.pre || 2.0}
-            onChange={(e) => onUpdate({ params: { ...item.params, pre: parseFloat(e.target.value) || 1 } })}
-            onClick={(e) => e.stopPropagation()}
-            className="w-12 text-center rounded px-1 font-bold bg-slate-800 text-amber-300 border border-slate-700"
-          />
-          <span>sec</span>
+      {/* Controls Overlay */}
+      {isSelected && (
+        <div className="absolute -top-6 right-[-10px] flex items-center bg-[#2d2d2d] border border-[#404040] shadow-xl rounded z-50">
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 hover:text-red-400 text-slate-400" title="Delete">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>
   );
 }
 
-// RSLogix 500 Timer On Delay (TON) Instruction Block
-function TimerInstructionBlock({
-  item,
-  isSelected,
-  isActive,
-  plcData,
-  onSelect,
-  onOpenPicker,
-  onUpdate,
-  onDelete,
-  onDropItem
-}) {
-  const [isDragOver, setIsDragOver] = useState(false);
-  const operand = item.operand || 'T4:0';
-  const tIdx = parseInt(String(operand).replace(/^T4:/, ''), 10) || 0;
-  const timerData = plcData?.T4?.[tIdx] || { PRE: item.params?.pre || 100, ACC: 0, EN: false, TT: false, DN: false };
+// Minimalist Timer Block
+function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onDelete }) {
+  return <RungElementCard item={item} isSelected={isSelected} isActive={isActive} onSelect={onSelect} onOpenPicker={onOpenPicker} onDelete={onDelete} />;
+}
 
-  const timeBase = item.params?.timeBase !== undefined ? item.params.timeBase : 1.0;
-  const presetVal = item.params?.pre !== undefined ? item.params.pre : (timerData.PRE || 100);
-  const accumVal = timerData ? (typeof timerData.ACC === 'number' ? Math.round(timerData.ACC) : 0) : 0;
+// Minimalist Math Block
+function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onDelete }) {
+  return <RungElementCard item={item} isSelected={isSelected} isActive={isActive} onSelect={onSelect} onOpenPicker={onOpenPicker} onDelete={onDelete} />;
+}
 
-  const isEnabled = !!timerData?.EN;
-  const isDone = !!timerData?.DN;
-  const isTiming = !!timerData?.TT;
-
+// Small gray square that appears on wires during branch mode
+function BranchDotNode({ rungIdx, itemIdx, isBranchMode, branchStartNode, onNodeClick }) {
+  if (!isBranchMode) return <div className="w-4 h-[1px] shrink-0 bg-transparent" />;
+  
+  const isStart = branchStartNode?.rungIdx === rungIdx && branchStartNode?.itemIdx === itemIdx;
+  
   return (
-    <div
-      onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-      onDragLeave={() => setIsDragOver(false)}
-      onDrop={(e) => { setIsDragOver(false); onDropItem(e); }}
-      className="flex items-center relative select-none cursor-pointer py-1"
+    <div 
+      className="flex items-center justify-center w-4 h-4 cursor-pointer relative z-20 group bg-slate-900 mx-1" 
+      onClick={(e) => { e.stopPropagation(); onNodeClick(rungIdx, itemIdx); }}
     >
-      {/* Input Wire connection into left edge */}
-      <div className={`w-3.5 h-1 ${isActive ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-slate-600'}`} />
-
-      {/* Main RSLogix 500 Timer Block Box */}
-      <div
-        className={`relative rounded border-2 px-3.5 pt-3 pb-2.5 min-w-[200px] font-mono shadow-xl transition-all duration-150 ${
-          isDragOver
-            ? 'ring-4 ring-emerald-400 border-emerald-300 bg-emerald-950/80 scale-102'
-            : isSelected
-              ? 'ring-2 ring-cyan-400 border-cyan-400 bg-slate-900 shadow-[0_0_18px_rgba(6,182,212,0.4)]'
-              : isActive
-                ? 'border-emerald-500 bg-slate-900 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
-                : 'border-blue-500 bg-slate-950 hover:border-blue-400'
-        }`}
-      >
-        {/* Top Header Broken Line with 'TON' */}
-        <div className="absolute -top-3 left-5 px-2 py-0.5 bg-slate-900 border border-blue-500/70 rounded text-blue-400 font-extrabold text-xs tracking-wider flex items-center gap-1 shadow-sm">
-          <span>TON</span>
-        </div>
-
-        {/* Delete Button (top right) */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="absolute top-1.5 right-1.5 p-1 text-slate-500 hover:text-red-400 rounded transition cursor-pointer"
-          title="Delete Timer Block"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-
-        {/* Title matching screenshot: 'Timer On Delay' */}
-        <div className="text-[12px] font-sans font-bold text-blue-400 mb-2">
-          Timer On Delay
-        </div>
-
-        {/* Rows matching RSLogix 500 layout */}
-        <div className="space-y-1.5 text-xs font-mono">
-          {/* Row 1: Timer Address */}
-          <div className="flex items-center justify-between">
-            <span className="text-blue-300 font-medium">Timer</span>
-            <button
-              onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
-              className="font-bold text-white hover:text-cyan-300 px-1.5 py-0.5 rounded hover:bg-slate-800 transition flex items-center gap-1 cursor-pointer"
-              title="Click to change timer address (T4:0, T4:1, etc.)"
-            >
-              <span>{operand}</span>
-              <ChevronDown className="w-3 h-3 opacity-60" />
-            </button>
-          </div>
-
-          {/* Row 2: Time Base */}
-          <div className="flex items-center justify-between">
-            <span className="text-blue-300 font-medium">Time Base</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const nextBase = timeBase === 1.0 ? 0.01 : 1.0;
-                onUpdate({ params: { ...item.params, timeBase: nextBase } });
-              }}
-              className="font-bold text-white hover:text-cyan-300 px-1.5 py-0.5 rounded hover:bg-slate-800 transition cursor-pointer"
-              title="Click to toggle Time Base (1.0s / 0.01s)"
-            >
-              {timeBase.toFixed(timeBase < 1 ? 2 : 1)}
-            </button>
-          </div>
-
-          {/* Row 3: Preset */}
-          <div className="flex items-center justify-between">
-            <span className="text-blue-300 font-medium">Preset</span>
-            <div className="flex items-center">
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={presetVal}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value) || 1;
-                  onUpdate({ params: { ...item.params, pre: val } });
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className="w-16 text-right bg-slate-900 text-white font-mono font-bold rounded px-1.5 py-0.5 border border-slate-700/80 hover:border-cyan-400 focus:border-cyan-400 focus:outline-none"
-              />
-              <span className="text-blue-400 font-bold ml-0.5">&lt;</span>
-            </div>
-          </div>
-
-          {/* Row 4: Accumulator */}
-          <div className="flex items-center justify-between">
-            <span className="text-blue-300 font-medium">Accum</span>
-            <div className="flex items-center">
-              <span className={`w-16 text-right font-mono font-bold px-1.5 py-0.5 ${
-                isTiming
-                  ? 'text-amber-400 animate-pulse'
-                  : isDone
-                    ? 'text-emerald-400'
-                    : 'text-white'
-              }`}>
-                {accumVal}
-              </span>
-              <span className="text-blue-400 font-bold ml-0.5">&lt;</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Side Outputs: (EN) and (DN) Terminals */}
-      <div className="flex flex-col justify-between h-[96px] py-1.5 ml-1 text-xs font-mono">
-        {/* Enable (EN) Terminal */}
-        <div className="flex items-center">
-          <div className={`w-4 h-0.5 transition-all ${isEnabled ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-blue-500'}`} />
-          <div
-            className={`px-1.5 py-0.5 rounded border font-mono font-extrabold text-[11px] transition-all flex items-center justify-center ${
-              isEnabled
-                ? 'bg-emerald-500 border-emerald-300 text-slate-950 shadow-[0_0_12px_#10b981]'
-                : 'border-blue-500 text-blue-300 bg-slate-900'
-            }`}
-            title="Enable Bit (T4:0.EN) — High when timer receives power"
-          >
-            (EN)
-          </div>
-          <div className={`w-4 h-0.5 transition-all ${isEnabled ? 'bg-emerald-400' : 'bg-slate-700'}`} />
-        </div>
-
-        {/* Done (DN) Terminal */}
-        <div className="flex items-center">
-          <div className={`w-4 h-0.5 transition-all ${isDone ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-blue-500'}`} />
-          <div
-            className={`px-1.5 py-0.5 rounded border font-mono font-extrabold text-[11px] transition-all flex items-center justify-center ${
-              isDone
-                ? 'bg-emerald-500 border-emerald-300 text-slate-950 shadow-[0_0_12px_#10b981]'
-                : 'border-blue-500 text-blue-300 bg-slate-900'
-            }`}
-            title="Done Bit (T4:0.DN) — High when Accum >= Preset"
-          >
-            (DN)
-          </div>
-          <div className={`w-4 h-0.5 transition-all ${isDone ? 'bg-emerald-400' : 'bg-slate-700'}`} />
-        </div>
-      </div>
+      <div className={`transition-all rounded-[1px] ${
+        isStart 
+          ? 'w-2.5 h-2.5 bg-emerald-500 ring-2 ring-emerald-300/40 rounded-full' 
+          : 'w-2 h-2 bg-slate-500 group-hover:bg-cyan-400 group-hover:scale-125 group-hover:rounded-full'
+      }`} />
     </div>
   );
 }
 
-// RSLogix 500 Math Instruction Block (ADD, SUB, MUL, DIV)
-function MathInstructionBlock({
-  item,
-  isSelected,
-  isActive,
-  plcData,
-  onSelect,
-  onOpenPicker,
-  onUpdate,
-  onDelete,
-  onDropItem
-}) {
-  const [isDragOver, setIsDragOver] = useState(false);
-  const type = item.type || 'ADD';
-  const operand = item.operand || 'N7:0';
-  const params = item.params || {};
-
-  const sourceA = params.sourceA !== undefined ? params.sourceA : operand;
-  const sourceB = params.sourceB !== undefined ? params.sourceB : '1';
-  const dest = params.dest || operand || 'N7:1';
-
-  // Helper to resolve live display value
-  const getDisplayVal = (addrOrNum) => {
-    if (addrOrNum === undefined || addrOrNum === null) return 0;
-    const s = String(addrOrNum).trim();
-    if (/^-?\d+(\.\d+)?$/.test(s)) return parseFloat(s);
-    if (s.startsWith('N7:')) {
-      const idx = parseInt(s.replace('N7:', ''), 10);
-      return plcData?.N7?.[idx] ?? 0;
-    }
-    if (s.startsWith('T4:')) {
-      const match = s.match(/^T4:(\d+)\.([A-Z]+)$/);
-      if (match) {
-        const tIdx = parseInt(match[1], 10);
-        const field = match[2];
-        const timer = plcData?.T4?.[tIdx];
-        if (timer && field === 'ACC') return Math.round(timer.ACC);
-        if (timer && field === 'PRE') return timer.PRE;
-      }
-    }
-    return plcData?.bits?.[s] ? 1 : 0;
-  };
-
-  const valA = getDisplayVal(sourceA);
-  const valB = getDisplayVal(sourceB);
-  const destVal = getDisplayVal(dest);
-
-  const titles = {
-    ADD: 'Add',
-    SUB: 'Subtract',
-    MUL: 'Multiply',
-    DIV: 'Divide'
-  };
-
+function WireJunctionHandle({ rungIdx, itemIdx, onDropJunction, isBranchMode, branchStartNode, onNodeClick }) {
   return (
-    <div
-      onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-      onDragLeave={() => setIsDragOver(false)}
-      onDrop={(e) => { setIsDragOver(false); onDropItem(e); }}
-      className="flex items-center relative select-none cursor-pointer py-1"
-    >
-      {/* Input Conductor Line */}
-      <div className={`w-3.5 h-1 ${isActive ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-slate-600'}`} />
-
-      {/* Math Block Frame */}
-      <div
-        className={`relative rounded border-2 px-3.5 pt-3 pb-2.5 min-w-[210px] font-mono shadow-xl transition-all duration-150 ${
-          isDragOver
-            ? 'ring-4 ring-emerald-400 border-emerald-300 bg-emerald-950/80 scale-102'
-            : isSelected
-              ? 'ring-2 ring-cyan-400 border-cyan-400 bg-slate-900 shadow-[0_0_18px_rgba(6,182,212,0.4)]'
-              : isActive
-                ? 'border-emerald-500 bg-slate-900 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
-                : 'border-indigo-500 bg-slate-950 hover:border-indigo-400'
-        }`}
-      >
-        {/* Top Header Broken Line with Type */}
-        <div className="absolute -top-3 left-5 px-2 py-0.5 bg-slate-900 border border-indigo-500/70 rounded text-indigo-300 font-extrabold text-xs tracking-wider flex items-center gap-1 shadow-sm">
-          <span>{type}</span>
-        </div>
-
-        {/* Delete Button */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="absolute top-1.5 right-1.5 p-1 text-slate-500 hover:text-red-400 rounded transition cursor-pointer"
-          title={`Delete ${type} Block`}
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-
-        {/* Title */}
-        <div className="text-[12px] font-sans font-bold text-indigo-300 mb-2">
-          {titles[type] || 'Compute'}
-        </div>
-
-        {/* Rows: Source A, Source B, Dest */}
-        <div className="space-y-1.5 text-xs font-mono">
-          {/* Source A */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-400 font-medium text-[11px]">Source A</span>
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                value={sourceA}
-                onChange={(e) => onUpdate({ params: { ...params, sourceA: e.target.value } })}
-                onClick={(e) => e.stopPropagation()}
-                className="w-16 bg-slate-900 border border-slate-700 focus:border-cyan-400 rounded px-1.5 py-0.5 text-right font-bold text-white text-[11px]"
-                title="Source A operand or constant"
-              />
-              <span className="text-[10px] text-cyan-400 font-bold px-1 rounded bg-slate-800">
-                &lt; {valA} &gt;
-              </span>
-            </div>
-          </div>
-
-          {/* Source B */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-400 font-medium text-[11px]">Source B</span>
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                value={sourceB}
-                onChange={(e) => onUpdate({ params: { ...params, sourceB: e.target.value } })}
-                onClick={(e) => e.stopPropagation()}
-                className="w-16 bg-slate-900 border border-slate-700 focus:border-cyan-400 rounded px-1.5 py-0.5 text-right font-bold text-white text-[11px]"
-                title="Source B operand or constant"
-              />
-              <span className="text-[10px] text-cyan-400 font-bold px-1 rounded bg-slate-800">
-                &lt; {valB} &gt;
-              </span>
-            </div>
-          </div>
-
-          {/* Dest */}
-          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800">
-            <span className="text-indigo-400 font-bold text-[11px]">Dest</span>
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                value={dest}
-                onChange={(e) => onUpdate({ operand: e.target.value, params: { ...params, dest: e.target.value } })}
-                onClick={(e) => e.stopPropagation()}
-                className="w-16 bg-slate-900 border border-slate-700 focus:border-cyan-400 rounded px-1.5 py-0.5 text-right font-bold text-amber-300 text-[11px]"
-                title="Destination Register (e.g. N7:0)"
-              />
-              <span className={`text-[10px] font-bold px-1.5 rounded ${
-                isActive ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'bg-slate-800 text-slate-400'
-              }`}>
-                &lt; {destVal} &gt;
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Output Conductor Line to Right */}
-      <div className={`w-3.5 h-1 ${isActive ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-slate-600'}`} />
-    </div>
+    <BranchDotNode 
+      rungIdx={rungIdx} 
+      itemIdx={itemIdx} 
+      isBranchMode={isBranchMode} 
+      branchStartNode={branchStartNode} 
+      onNodeClick={onNodeClick} 
+    />
   );
 }
 

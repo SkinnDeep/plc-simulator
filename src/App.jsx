@@ -6,10 +6,10 @@ import { Header } from './components/Header';
 import { HardwareTrainer } from './components/HardwareTrainer';
 import { LadderEditor } from './components/LadderEditor';
 import { LearningTab } from './components/LearningTab';
-import { TutorialModal } from './components/TutorialModal';
+import { SpotlightTour } from './components/SpotlightTour';
 import { BitMonitorDrawer } from './components/BitMonitorDrawer';
 import { validateLadderLogic } from './engine/plcValidator';
-import { Check } from 'lucide-react';
+import { Check, AlertTriangle } from 'lucide-react';
 
 const INITIAL_BLANK_RUNGS = [
   {
@@ -22,13 +22,45 @@ const INITIAL_BLANK_RUNGS = [
 export function App() {
   const [plcData, setPlcData] = useState(() => createInitialDataModel());
   const [isRunning, setIsRunning] = useState(true);
-  const [currentRungs, setCurrentRungs] = useState(() => INITIAL_BLANK_RUNGS);
+  
+  // History stack for Undo/Redo
+  const [history, setHistory] = useState([INITIAL_BLANK_RUNGS]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  
+  const currentRungs = history[historyIndex];
+
+  const setCurrentRungs = (newRungs) => {
+    const resolvedRungs = typeof newRungs === 'function' ? newRungs(currentRungs) : newRungs;
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(resolvedRungs);
+    if (newHistory.length > 50) newHistory.shift();
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) setHistoryIndex(historyIndex - 1);
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) setHistoryIndex(historyIndex + 1);
+  };
+
   const [scanResult, setScanResult] = useState(null);
   const [activeMainTab, setActiveMainTab] = useState('simulator'); // 'simulator' | 'learning'
   const [mobileView, setMobileView] = useState('ladder'); // 'bench' | 'ladder' on mobile
   const [loadNotice, setLoadNotice] = useState(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isBitMonitorOpen, setIsBitMonitorOpen] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('theme', next);
+  };
+
+
 
   const engineRef = useRef(null);
 
@@ -110,6 +142,8 @@ export function App() {
   };
 
   const handleResetMemory = () => {
+    engine.stop();
+    setIsRunning(false);
     const fresh = createInitialDataModel();
     engine.data = fresh;
     if (engine.latchedOutputs) engine.latchedOutputs.clear();
@@ -162,19 +196,26 @@ export function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
+    <div className={`flex flex-col h-screen w-screen bg-slate-950 bg-grid-pattern text-slate-100 overflow-hidden font-sans ${theme === 'light' ? 'light-mode' : ''}`}>
       {/* 1. Header Toolbar */}
       <Header
         isRunning={isRunning}
         onToggleRun={handleToggleRun}
         onResetMemory={handleResetMemory}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
         activeMainTab={activeMainTab}
         onChangeMainTab={setActiveMainTab}
         onSelectSampleProgram={handleSelectSampleProgram}
         onOpenHelp={() => setIsHelpOpen(true)}
         hasErrors={hasErrors}
+        logicIssues={logicIssues}
         isBitMonitorOpen={isBitMonitorOpen}
         onToggleBitMonitor={() => setIsBitMonitorOpen(v => !v)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Program Loaded Notification Banner */}
@@ -235,6 +276,10 @@ export function App() {
                   onChangeRungs={setCurrentRungs}
                   scanResult={scanResult}
                   plcData={plcData}
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
+                  isRunning={isRunning}
+                  logicIssues={logicIssues}
                 />
               </div>
             </div>
@@ -260,10 +305,28 @@ export function App() {
         onSetRegister={handleSetRegister}
       />
 
+      {/* Logic Warnings Console Banner (Bottom) */}
+      {hasErrors && (
+        <div className="bg-amber-950/80 border-t border-amber-500/50 text-amber-200 px-4 py-2 text-xs font-mono max-h-32 overflow-y-auto shrink-0 shadow-[0_-5px_15px_rgba(245,158,11,0.1)]">
+          <div className="font-bold flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+            <span>Compiler Warnings ({logicIssues.length})</span>
+          </div>
+          <ul className="list-disc pl-8 space-y-0.5">
+            {logicIssues.map((issue, idx) => (
+              <li key={idx} className="text-amber-300/80">{issue.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* 4. Interactive Tutorial & Help Modal */}
-      <TutorialModal
-        isOpen={isHelpOpen}
-        onClose={() => setIsHelpOpen(false)}
+      <SpotlightTour
+        isActive={isHelpOpen}
+        onComplete={() => setIsHelpOpen(false)}
+        rungs={currentRungs}
+        isRunning={isRunning}
+        plcData={plcData}
       />
     </div>
   );

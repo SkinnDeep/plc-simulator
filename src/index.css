@@ -11,6 +11,24 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
+  .light-mode {
+    filter: invert(1) hue-rotate(180deg);
+  }
+  
+  .light-mode img,
+  .light-mode video,
+  .light-mode [data-no-invert] {
+    filter: invert(1) hue-rotate(180deg);
+  }
+
+  /* Gestalt Enclosure Grid */
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;

@@ -77,8 +77,11 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning }) {
   return (
     <div
       id="tour-trainer"
-      className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-4 select-none"
+      className="bg-[#212328] border-2 border-[#3c414a] rounded-2xl p-4 shadow-[0_0_25px_rgba(0,0,0,0.5)] flex flex-col gap-4 select-none relative overflow-hidden"
     >
+      {/* Subtle metallic gradient overlay for physical panel feel */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+
       {/* 1. Header & Module Identification */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2.5">

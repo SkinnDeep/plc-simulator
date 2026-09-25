@@ -1,34 +1,41 @@
 import React from 'react';
-import { Play, Square, RotateCcw, Cpu, GraduationCap, HelpCircle, CheckCircle2, AlertTriangle, Database } from 'lucide-react';
+import { Play, Square, RotateCcw, Cpu, GraduationCap, HelpCircle, CheckCircle2, AlertTriangle, Database, Undo2, Redo2 } from 'lucide-react';
 import { SAMPLE_PROGRAMS } from '../data/samplePrograms';
 
 export function Header({
   isRunning,
   onToggleRun,
   onResetMemory,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   activeMainTab,
   onChangeMainTab,
   onSelectSampleProgram,
   onOpenHelp,
   hasErrors,
+  logicIssues,
   isBitMonitorOpen,
-  onToggleBitMonitor
+  onToggleBitMonitor,
+  theme,
+  onToggleTheme
 }) {
   return (
-    <header className="bg-slate-950 border-b-2 border-slate-800 text-slate-100 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 shadow-xl select-none">
+    <header className={`bg-[#1e1e1e] border-b-2 text-slate-100 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 shadow-xl select-none ${isRunning ? 'border-t-4 border-t-emerald-500 border-b-[#2d2d2d]' : 'border-t-4 border-t-slate-700 border-b-[#2d2d2d]'}`}>
       {/* Brand & Processor Status */}
       <div className="flex items-center gap-2.5">
         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-red-600 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-md shrink-0">
-          500
+          BYU
         </div>
         <div>
           <div className="flex items-center gap-1.5">
-            <h1 className="font-extrabold text-xs sm:text-sm tracking-tight text-white">RSLogix 500</h1>
+            <h1 className="font-extrabold text-xs sm:text-sm tracking-tight text-white">PLC Simulator</h1>
             <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono border border-emerald-500/20 font-bold">
-              PLC SIMULATOR
+              MFGEN 333
             </span>
           </div>
-          <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono hidden xs:block">MicroLogix 1000 Hardware Trainer</p>
+          <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono hidden xs:block">Created by SkinnDeep</p>
         </div>
       </div>
 
@@ -67,6 +74,27 @@ export function Header({
           <span className="hidden sm:inline">Reset</span>
         </button>
 
+        {/* Undo / Redo */}
+        <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={`px-2 py-1.5 sm:py-2 transition ${canUndo ? 'hover:bg-slate-700 text-slate-200 cursor-pointer' : 'opacity-50 text-slate-500 cursor-not-allowed'}`}
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+          </button>
+          <div className="w-[1px] h-4 bg-slate-700" />
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            className={`px-2 py-1.5 sm:py-2 transition ${canRedo ? 'hover:bg-slate-700 text-slate-200 cursor-pointer' : 'opacity-50 text-slate-500 cursor-not-allowed'}`}
+            title="Redo (Ctrl+Y)"
+          >
+            <Redo2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
         {/* Bit Monitor Drawer Toggle */}
         <button
           onClick={onToggleBitMonitor}
@@ -102,7 +130,7 @@ export function Header({
         </select>
 
         {/* Real-Time Logic Diagnostic Status */}
-        <div className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold ${
+        <div className={`group relative hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold cursor-help ${
           hasErrors
             ? 'bg-amber-950/60 border-amber-600 text-amber-300'
             : 'bg-emerald-950/40 border-emerald-600 text-emerald-300'
@@ -110,7 +138,16 @@ export function Header({
           {hasErrors ? (
             <>
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-              <span>Logic Warning</span>
+              <span>Logic Warning ({logicIssues?.length || 0})</span>
+              {/* Tooltip */}
+              <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-amber-600 shadow-xl rounded-lg p-3 hidden group-hover:block z-50">
+                <div className="font-bold text-amber-500 mb-1">Logic Warnings:</div>
+                <ul className="list-disc pl-4 space-y-1 text-slate-300 font-sans font-normal">
+                  {logicIssues?.map((issue, idx) => (
+                    <li key={idx}>{issue.message}</li>
+                  ))}
+                </ul>
+              </div>
             </>
           ) : (
             <>
@@ -123,6 +160,25 @@ export function Header({
 
       {/* Right Controls: Help Button & Main Tab Switcher */}
       <div className="flex items-center gap-1.5 sm:gap-2">
+        <button
+          onClick={onToggleTheme}
+          className="flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-semibold transition cursor-pointer"
+          title="Toggle Dark/Light Mode"
+        >
+          {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+        </button>
+
+        <a
+          href="https://github.com/SkinnDeep/plc-simulator/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-lg bg-red-900/40 hover:bg-red-800/60 text-red-300 border border-red-700/50 text-xs font-semibold transition cursor-pointer"
+          title="Found a bug? Report it on GitHub!"
+        >
+          <AlertTriangle className="w-4 h-4 text-red-400" />
+          <span className="hidden sm:inline">Report Bug</span>
+        </a>
+
         <button
           onClick={onOpenHelp}
           className="flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-semibold transition cursor-pointer"

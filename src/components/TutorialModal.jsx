@@ -163,7 +163,7 @@ export function TutorialModal({ isOpen, onClose }) {
         title="Click outside to skip tutorial"
       />
 
-      {/* 2. Spotlight Cut-Out Window: ZERO blur, 100% crystal clear inside, infinite dark backdrop outside */}
+      {/* 2. Spotlight Cut-Out Window */}
       {targetRect ? (
         <div
           style={{
@@ -174,7 +174,6 @@ export function TutorialModal({ isOpen, onClose }) {
             height: `${Math.round(targetRect.height + 12)}px`,
             borderRadius: '16px',
             border: '2px solid #22d3ee',
-            // Infinite 9999px shadow darkens everything outside, leaving the inside 100% clear and unblurred
             boxShadow: '0 0 0 9999px rgba(2, 6, 23, 0.75), 0 0 25px rgba(6, 182, 212, 0.85)',
             pointerEvents: 'none',
             zIndex: 45,
