@@ -17,7 +17,7 @@ export function SpotlightTour({
       id: 'tour-stop-mode',
       targetId: 'tour-controls', // Points to the header controls
       title: 'Step 1: Stop the PLC',
-      text: 'You cannot edit logic while the PLC is running. Click the STOP button in the top menu.',
+      text: 'If the PLC is running, you cannot edit logic. Make sure it says RUN (meaning it is currently stopped) before continuing.',
       isComplete: () => !isRunning,
       position: 'bottom'
     },
@@ -25,7 +25,7 @@ export function SpotlightTour({
       id: 'tour-add-contact',
       targetId: 'tour-palette',
       title: 'Step 2: Add an Input Contact',
-      text: 'Click the XIC (-[ ]-) button in the palette to add a Normally Open contact to your rung.',
+      text: 'Click the XIC (-] [-) button in the palette to add a Normally Open contact to your rung.',
       isComplete: () => rungs[0]?.items?.some(it => !['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(it.type)),
       position: 'bottom'
     },
@@ -51,7 +51,7 @@ export function SpotlightTour({
     },
     {
       id: 'tour-run',
-      targetId: 'tour-controls',
+      targetId: 'tour-run',
       title: 'Step 5: Run the Program',
       text: 'Awesome! Now click RUN in the top menu to start scanning your new logic.',
       isComplete: () => isRunning,

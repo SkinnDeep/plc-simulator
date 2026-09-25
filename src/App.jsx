@@ -278,6 +278,7 @@ export function App() {
                   plcData={plcData}
                   onToggleInput={handleToggleInput}
                   isRunning={isRunning}
+                  theme={theme}
                 />
               </div>
 

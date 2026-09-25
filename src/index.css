@@ -24,17 +24,14 @@ button, a, select { touch-action: manipulation; }
 .light-mode :is(.bg-slate-950, .bg-slate-900, .bg-slate-800) { background-color: #f1f5f9; }
 .light-mode [class*="bg-slate-950/"], .light-mode [class*="bg-slate-900/"] { background-color: #f8fafc; }
 .light-mode [class*="bg-[#1e1e1e]"] { background-color: #fff; }
+.light-mode [class*="bg-[#212328]"] { background-color: #f8fafc; }
+.light-mode [class*="border-[#3c414a]"] { border-color: #cbd5e1; }
 .light-mode :is(.text-slate-100, .text-slate-200, .text-slate-300) { color: #26364a; }
 .light-mode :is(.text-slate-400, .text-slate-500) { color: #52647a; }
 .light-mode :is(.border-slate-800, .border-slate-700) { border-color: #cbd5e1; }
 .light-mode .app-header h1, .light-mode #bit-monitor h3 { color: #17263a; }
 .light-mode .app-header :is(.text-cyan-300, .text-purple-300, .text-amber-300) { color: #155e75; }
-/* The physical trainer remains a dark instrument panel in either theme. */
-.light-mode #tour-trainer :is(.text-slate-100, .text-slate-200, .text-slate-300) { color: #e2e8f0; }
-.light-mode #tour-trainer :is(.text-slate-400, .text-slate-500) { color: #94a3b8; }
-.light-mode #tour-trainer :is(.bg-slate-950, .bg-slate-900, .bg-slate-800) { background-color: #1e293b; }
-.light-mode #tour-trainer [class*="bg-slate-950/"] { background-color: #0f172a; }
-.light-mode #tour-trainer [class*="bg-slate-800/"] { background-color: #1e293b; }
+
 .light-mode #tour-palette [class*="bg-[#1a1a1a]"] { background-color: #e2e8f0; }
 .light-mode #tour-palette .text-white { color: #17263a; }
 .light-mode #tour-rungs [class*="bg-[#"] { background-color: #e2e8f0; }

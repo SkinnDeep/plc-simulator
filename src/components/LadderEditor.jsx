@@ -1005,7 +1005,7 @@ export function LadderEditor({
       {addressPickerTarget && (
         <div
           onClick={() => setAddressPickerTarget(null)}
-          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[10000] bg-black/70 flex items-center justify-center p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1119,7 +1119,7 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
 
       {/* Symbol */}
       <div className={`text-base font-mono font-bold tracking-widest leading-none ${color} ${isSelected ? 'ring-1 ring-cyan-500 px-1 rounded bg-[#2a2a2a]' : ''}`}>
-        {item.type === 'XIC' && '-[ ]-'}
+        {item.type === 'XIC' && '-] [-'}
         {item.type === 'XIO' && '-[/]-'}
         {item.type === 'OTE' && '-( )-'}
         {item.type === 'OTL' && '-(L)-'}

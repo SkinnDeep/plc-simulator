@@ -23,7 +23,7 @@ export function Header({
   onToggleTheme
 }) {
   return (
-    <header className={`app-header bg-[#1e1e1e] border-b-2 text-slate-100 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 shadow-xl select-none ${isRunning ? 'border-t-4 border-t-emerald-500 border-b-[#2d2d2d]' : 'border-t-4 border-t-slate-700 border-b-[#2d2d2d]'}`}>
+    <header className={`app-header bg-[#1e1e1e] border-b-2 text-slate-100 px-3 sm:px-4 py-2 flex flex-nowrap items-center justify-between gap-4 shadow-xl select-none ${isRunning ? 'border-t-4 border-t-emerald-500 border-b-[#2d2d2d]' : 'border-t-4 border-t-slate-700 border-b-[#2d2d2d]'}`}>
       {/* Brand & Processor Status */}
       <div className="flex items-center gap-2.5">
         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-red-600 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-md shrink-0">
@@ -41,9 +41,10 @@ export function Header({
       </div>
 
       {/* Primary Actions: RUN/STOP, RESET, PRESETS, BIT MONITOR */}
-      <div id="tour-controls" role="group" aria-label="Program controls" className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+      <div id="tour-controls" role="group" aria-label="Program controls" className="flex items-center gap-1.5 sm:gap-2 flex-nowrap shrink-0">
         {/* RUN / STOP Button */}
         <button
+          id="tour-run"
           onClick={onToggleRun}
           className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold text-xs shadow-lg transition-transform active:scale-95 cursor-pointer ${
             isRunning
