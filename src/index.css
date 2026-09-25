@@ -1,24 +1,69 @@
 @import "tailwindcss";
 
+@theme { --breakpoint-xs: 30rem; }
+
+/* Proximity and common regions distinguish navigation, execution, and editing. */
+.app-shell { height: 100dvh; }
+.app-header { background: #101a2b; border-top-width: 3px; box-shadow: none; flex-shrink: 0; }
+.app-header > div:first-child { min-width: 180px; }
+.app-header #tour-controls { padding: 6px 12px; border-inline: 1px solid #334155; }
+.app-header button, .app-header a, .app-header select { min-height: 36px; }
+.app-header button:disabled { cursor: not-allowed; }
+#tour-trainer { border-width: 1px; box-shadow: none; }
+#tour-rungs { overscroll-behavior: contain; }
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid #38bdf8; outline-offset: 3px;
+}
+input, textarea { user-select: text; }
+button, a, select { touch-action: manipulation; }
+.text-\[9px\], .text-\[10px\] { font-size: 11px; }
+
+/* Real light surfaces preserve the learned meanings of red, amber, and green. */
+.light-mode { background: #edf2f7; color: #17263a; color-scheme: light; }
+.light-mode .app-header { background: #f8fafc; border-bottom-color: #cbd5e1; color: #17263a; }
+.light-mode :is(.bg-slate-950, .bg-slate-900, .bg-slate-800) { background-color: #f1f5f9; }
+.light-mode [class*="bg-slate-950/"], .light-mode [class*="bg-slate-900/"] { background-color: #f8fafc; }
+.light-mode [class*="bg-[#1e1e1e]"] { background-color: #fff; }
+.light-mode :is(.text-slate-100, .text-slate-200, .text-slate-300) { color: #26364a; }
+.light-mode :is(.text-slate-400, .text-slate-500) { color: #52647a; }
+.light-mode :is(.border-slate-800, .border-slate-700) { border-color: #cbd5e1; }
+.light-mode .app-header h1, .light-mode #bit-monitor h3 { color: #17263a; }
+.light-mode .app-header :is(.text-cyan-300, .text-purple-300, .text-amber-300) { color: #155e75; }
+/* The physical trainer remains a dark instrument panel in either theme. */
+.light-mode #tour-trainer :is(.text-slate-100, .text-slate-200, .text-slate-300) { color: #e2e8f0; }
+.light-mode #tour-trainer :is(.text-slate-400, .text-slate-500) { color: #94a3b8; }
+.light-mode #tour-trainer :is(.bg-slate-950, .bg-slate-900, .bg-slate-800) { background-color: #1e293b; }
+.light-mode #tour-trainer [class*="bg-slate-950/"] { background-color: #0f172a; }
+.light-mode #tour-trainer [class*="bg-slate-800/"] { background-color: #1e293b; }
+.light-mode #tour-palette [class*="bg-[#1a1a1a]"] { background-color: #e2e8f0; }
+.light-mode #tour-palette .text-white { color: #17263a; }
+.light-mode #tour-rungs [class*="bg-[#"] { background-color: #e2e8f0; }
+.light-mode #tour-rungs :is(.text-emerald-400, .text-emerald-300),
+.light-mode .editor-toolbar .text-emerald-400 { color: #047857; }
+.light-mode .app-header [class*="bg-emerald-950/"] { background-color: #d1fae5; color: #065f46; }
+.light-mode .app-header [class*="bg-red-900/"] { background-color: #fff1f2; color: #9f1239; }
+.editor-toolbar > div { flex-wrap: wrap; }
+#tour-palette button { min-height: 36px; }
+#tour-palette button:disabled { opacity: .35; cursor: not-allowed; }
+.app-header > div:last-child { margin-left: auto; }
+@media (max-width: 767px) {
+  .app-header { gap: 8px; padding: 8px; }
+  .app-header #tour-controls { order: 3; width: 100%; border: 0; border-top: 1px solid #334155; padding: 8px 0 0; }
+  .app-header button, .app-header a, .app-header select { min-height: 40px; }
+  .app-header > div:first-child { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
 @layer base {
   body {
     margin: 0;
     padding: 0;
-    user-select: none;
-    -webkit-user-select: none;
+    user-select: text;
     background-color: #0b0f19;
     color: #e2e8f0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
-
-  .light-mode {
-    filter: invert(1) hue-rotate(180deg);
-  }
-  
-  .light-mode img,
-  .light-mode video,
-  .light-mode [data-no-invert] {
-    filter: invert(1) hue-rotate(180deg);
   }
 
   /* Gestalt Enclosure Grid */

@@ -14,6 +14,7 @@ export function Header({
   onChangeMainTab,
   onSelectSampleProgram,
   onOpenHelp,
+  showRunHint,
   hasErrors,
   logicIssues,
   isBitMonitorOpen,
@@ -22,7 +23,7 @@ export function Header({
   onToggleTheme
 }) {
   return (
-    <header className={`bg-[#1e1e1e] border-b-2 text-slate-100 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 shadow-xl select-none ${isRunning ? 'border-t-4 border-t-emerald-500 border-b-[#2d2d2d]' : 'border-t-4 border-t-slate-700 border-b-[#2d2d2d]'}`}>
+    <header className={`app-header bg-[#1e1e1e] border-b-2 text-slate-100 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 shadow-xl select-none ${isRunning ? 'border-t-4 border-t-emerald-500 border-b-[#2d2d2d]' : 'border-t-4 border-t-slate-700 border-b-[#2d2d2d]'}`}>
       {/* Brand & Processor Status */}
       <div className="flex items-center gap-2.5">
         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-red-600 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-md shrink-0">
@@ -40,14 +41,16 @@ export function Header({
       </div>
 
       {/* Primary Actions: RUN/STOP, RESET, PRESETS, BIT MONITOR */}
-      <div id="tour-controls" className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+      <div id="tour-controls" role="group" aria-label="Program controls" className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
         {/* RUN / STOP Button */}
         <button
           onClick={onToggleRun}
           className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold text-xs shadow-lg transition-transform active:scale-95 cursor-pointer ${
             isRunning
               ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-              : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+              : showRunHint 
+                ? 'bg-emerald-400 text-slate-950 ring-4 ring-emerald-500/50 animate-pulse scale-105' 
+                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
           }`}
           title={isRunning ? "Stop PLC execution" : "Run PLC program"}
         >
@@ -97,7 +100,7 @@ export function Header({
 
         {/* Bit Monitor Drawer Toggle */}
         <button
-          onClick={onToggleBitMonitor}
+          aria-expanded={isBitMonitorOpen} aria-controls="bit-monitor" onClick={onToggleBitMonitor}
           className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg font-bold text-xs shadow-md transition active:scale-95 cursor-pointer ${
             isBitMonitorOpen
               ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30 ring-2 ring-purple-400'
@@ -112,6 +115,7 @@ export function Header({
 
         {/* Quick Presets Dropdown */}
         <select
+          aria-label="Load example program"
           onChange={(e) => {
             if (e.target.value) {
               onSelectSampleProgram(e.target.value);
@@ -131,11 +135,11 @@ export function Header({
 
         {/* Real-Time Logic Diagnostic Status */}
         <div className={`group relative hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold cursor-help ${
-          hasErrors
+          logicIssues?.length > 0
             ? 'bg-amber-950/60 border-amber-600 text-amber-300'
             : 'bg-emerald-950/40 border-emerald-600 text-emerald-300'
         }`}>
-          {hasErrors ? (
+          {logicIssues?.length > 0 ? (
             <>
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
               <span>Logic Warning ({logicIssues?.length || 0})</span>
@@ -152,7 +156,7 @@ export function Header({
           ) : (
             <>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Verified OK</span>
+              <span>No issues found</span>
             </>
           )}
         </div>
@@ -190,7 +194,7 @@ export function Header({
 
         <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-0.5 sm:p-1 text-xs font-bold">
           <button
-            onClick={() => onChangeMainTab('simulator')}
+            aria-pressed={activeMainTab === 'simulator'} onClick={() => onChangeMainTab('simulator')}
             className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md transition cursor-pointer ${
               activeMainTab === 'simulator'
                 ? 'bg-cyan-500 text-slate-950 shadow'
@@ -198,11 +202,11 @@ export function Header({
             }`}
           >
             <Cpu className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Simulator</span>
+            <span className="">Simulator</span>
           </button>
 
           <button
-            onClick={() => onChangeMainTab('learning')}
+            aria-pressed={activeMainTab === 'learning'} onClick={() => onChangeMainTab('learning')}
             className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md transition cursor-pointer ${
               activeMainTab === 'learning'
                 ? 'bg-cyan-500 text-slate-950 shadow'
@@ -210,7 +214,7 @@ export function Header({
             }`}
           >
             <GraduationCap className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Learning</span>
+            <span className="">Learning</span>
           </button>
         </div>
       </div>

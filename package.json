@@ -4,6 +4,8 @@
   "description": "Modern RSLogix 500 PLC Simulator with Hardware Trainer and Interactive Learning Lab",
   "type": "module",
   "scripts": {
+    "test": "node --test tests/engine.test.mjs",
+    "test:browser": "node tests/browser.cjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

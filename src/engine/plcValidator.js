@@ -1,5 +1,6 @@
 // RSLogix 500 Ladder Logic Validator & Diagnostic Engine
 // Provides clear, express diagnostic messages stating what the error is and how to fix it.
+import { normalizeAddress, INSTRUCTION_TYPES } from '../types/plcTypes.js';
 
 export function validateLadderLogic(rungs) {
   const issues = [];
@@ -39,9 +40,13 @@ export function validateLadderLogic(rungs) {
     // Helper to inspect elements recursively
     const checkItem = (item) => {
       if (!item) return;
+      if (!Object.hasOwn(INSTRUCTION_TYPES, item.type)) {
+        issues.push({ severity: 'error', rungIdx: rIdx, elemId: item.id, message: `Unsupported instruction: ${item.type}.`, fix: 'Choose an available instruction from the palette.' });
+        return;
+      }
 
       if (item.type === 'SPLIT' || item.type === 'BRANCH') {
-        const branches = item.branches || [];
+        const branches = Array.isArray(item.branches) ? item.branches : [];
         if (branches.length < 2) {
           issues.push({
             severity: 'error',
@@ -74,6 +79,16 @@ export function validateLadderLogic(rungs) {
       if (isOut) hasOutput = true;
       else hasInput = true;
 
+      const address = normalizeAddress(item.operand);
+      const bitAddress = /^(?:[IO]:0\/[0-7]|B3:0\/(?:[0-9]|1[0-5])|T4:[0-9]\.(?:DN|TT|EN))$/;
+      const coilAddress = /^(?:O:0\/[0-7]|B3:0\/(?:[0-9]|1[0-5]))$/;
+      const valid = ['XIC','XIO'].includes(item.type) ? bitAddress.test(address)
+        : ['OTE','OTL','OTU'].includes(item.type) ? coilAddress.test(address)
+        : ['TON','RES'].includes(item.type) ? /^T4:[0-9]$/.test(address) : true;
+      if (address && !valid) issues.push({ severity: 'error', rungIdx: rIdx, elemId: item.id,
+        message: `${item.type} on rung ${rIdx} has an invalid or unavailable address: ${address}.`,
+        fix: 'Choose an address compatible with this instruction from the address picker.' });
+
       // Check operand presence
       if (!item.operand || String(item.operand).trim() === '') {
         issues.push({
@@ -104,14 +119,14 @@ export function validateLadderLogic(rungs) {
       // Check timer preset
       if (item.type === 'TON' || item.type === 'TOF' || item.type === 'RTO') {
         const pre = item.params?.pre;
-        if (pre !== undefined && Number(pre) <= 0) {
+        if (pre !== undefined && (!Number.isFinite(Number(pre)) || Number(pre) < 0)) {
           issues.push({
             severity: 'error',
             rungIdx: rIdx,
             elemId: item.id,
             title: `Invalid Timer Preset on Rung ${rIdx}`,
-            message: `Timer ${item.operand || 'T4:0'} has a preset time of ${pre}s. Preset must be greater than 0.`,
-            fix: `Increase the timer preset to 0.5s or higher.`
+            message: `Timer ${item.operand || 'T4:0'} has an invalid preset time of ${pre}s.`,
+            fix: `Set a finite, nonnegative time in seconds.`
           });
         }
       }

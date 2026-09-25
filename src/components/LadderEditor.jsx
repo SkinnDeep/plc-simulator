@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, GitFork, X, Check, AlertTriangle, ChevronDown } from 'lucide-react';
 import { InstructionPalette } from './InstructionPalette';
 import { validateLadderLogic } from '../engine/plcValidator';
+import { parseProgramFile } from '../engine/programFile';
 
 const COMMON_ADDRESS_OPTIONS = [
   { group: 'Inputs (Switches & Buttons)', items: [
@@ -39,6 +40,7 @@ export function LadderEditor({
   onUndo,
   onRedo,
   isRunning,
+  onStop,
   logicIssues
 }) {
   const [selectedRungIdx, setSelectedRungIdx] = useState(0);
@@ -49,9 +51,10 @@ export function LadderEditor({
 
   const [isBranchMode, setIsBranchMode] = useState(false);
   const [branchStartNode, setBranchStartNode] = useState(null);
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
   // Diagnostics validation passed from App via logicIssues
-  const hasErrors = logicIssues?.some(i => i.severity === 'error');
+  const hasErrors = logicIssues?.length > 0;
 
   const isElementActive = (rungId, elemId) => {
     if (!scanResult?.rungEvaluations) return false;
@@ -434,7 +437,8 @@ export function LadderEditor({
   // Keyboard shortcut listener (Delete, Backspace, Ctrl+C, Ctrl+X, Ctrl+V)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (e.target.isContentEditable || e.target.closest('[role=dialog]') || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (isRunning) return;
 
       // Delete or Backspace
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -528,7 +532,7 @@ export function LadderEditor({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemId, selectedRungIdx, rungs, clipboard, onUndo, onRedo]);
+  }, [selectedItemId, selectedRungIdx, rungs, clipboard, onUndo, onRedo, isRunning]);
 
   return (
     <div className="bg-[#1e1e1e] border border-[#2d2d2d] overflow-hidden shadow-xl flex flex-col flex-1 focus:outline-none h-full">
@@ -566,7 +570,7 @@ export function LadderEditor({
       )}
 
       {/* 2. Canvas Header Bar */}
-      <div className="bg-slate-950/80 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between">
+      <div className="editor-toolbar bg-slate-950/80 border-b border-slate-800 px-4 py-2.5 flex flex-wrap gap-3 items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-xs font-mono font-bold text-slate-200 uppercase tracking-wide">
             Ladder Logic Canvas
@@ -582,13 +586,13 @@ export function LadderEditor({
           ) : (
             <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-semibold">
               <Check className="w-3 h-3 text-emerald-400" />
-              <span>Verified OK</span>
+              <span>No issues found</span>
             </span>
           )}
         </div>
 
         {/* Utility Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => {
               const fileInput = document.createElement('input');
@@ -600,10 +604,9 @@ export function LadderEditor({
                 const reader = new FileReader();
                 reader.onload = (event) => {
                   try {
-                    const loaded = JSON.parse(event.target.result);
-                    if (Array.isArray(loaded)) onChangeRungs(loaded);
+                    onChangeRungs(parseProgramFile(event.target.result));
                   } catch (err) {
-                    alert('Invalid JSON file.');
+                    alert(`Could not import program: ${err.message}`);
                   }
                 };
                 reader.readAsText(file);
@@ -636,11 +639,7 @@ export function LadderEditor({
           <div className="w-[1px] h-5 bg-slate-700 mx-1" />
 
           <button
-            onClick={() => {
-              if (window.confirm("Are you sure you want to clear all rungs? This cannot be undone.")) {
-                onChangeRungs([{ id: `r_${Date.now()}`, comment: 'Rung 000: Control logic', items: [] }]);
-              }
-            }}
+            onClick={() => setIsClearModalOpen(true)}
             disabled={isRunning}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition ${isRunning ? 'opacity-50 cursor-not-allowed border-slate-700 text-slate-500 bg-transparent' : 'border-red-900/50 text-red-400 hover:bg-red-950 hover:text-red-300 cursor-pointer'}`}
             title="Clear all rungs"
@@ -665,11 +664,14 @@ export function LadderEditor({
       {/* 3. Ladder Rungs Canvas Container */}
       <div id="tour-rungs" className={`flex-1 p-4 overflow-y-auto space-y-4 transition-all relative ${isRunning ? 'bg-slate-900/90 grayscale-[0.3]' : 'bg-slate-950/60'}`}>
         {isRunning && (
-          <div className="sticky top-0 z-50 flex justify-center mb-4 pointer-events-none">
-            <div className="bg-amber-500 text-slate-950 font-bold text-xs px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2">
+          <div className="sticky top-0 z-50 flex justify-center mb-4">
+            <button 
+              onClick={onStop}
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)] flex items-center gap-2 cursor-pointer transition-colors"
+            >
               <span className="w-2 h-2 rounded-full bg-slate-950 animate-pulse" />
-              PROGRAM IS RUNNING - STOP TO MAKE EDITS
-            </div>
+              PROGRAM IS RUNNING - CLICK HERE TO STOP
+            </button>
           </div>
         )}
         
@@ -696,7 +698,7 @@ export function LadderEditor({
             >
               {/* Rung Header */}
               <div className="flex items-center justify-between text-xs pb-2 mb-3 border-b border-slate-800/80">
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold text-[11px] ${
                     isRungSelected
                       ? 'bg-cyan-500 text-slate-950'
@@ -708,6 +710,7 @@ export function LadderEditor({
                   </span>
                   <input
                     type="text"
+                    aria-label={`Rung ${rIdx} description`}
                     value={rung.comment || ''}
                     placeholder="Enter rung description comment..."
                     onChange={(e) => {
@@ -756,7 +759,7 @@ export function LadderEditor({
                   }`} />
 
                   {/* Left Side: Inputs & Parallel Branches */}
-                  <div className="flex items-center gap-1 relative z-10 flex-wrap py-2">
+                  <div className="flex items-center gap-1 relative z-10 shrink-0 py-2">
                     {inputItems.map((item, idx) => {
                       if (item.type === 'BRANCH' || item.type === 'SPLIT') {
                         const branchActive = isElementActive(rung.id, item.id);
@@ -1053,6 +1056,39 @@ export function LadderEditor({
           </div>
         </div>
       )}
+
+
+      {/* Clear Rungs Confirmation Modal */}
+      {isClearModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border-2 border-red-900/50 rounded-2xl p-6 shadow-2xl max-w-sm w-full relative">
+            <h3 className="text-lg font-bold text-red-400 mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Clear Logic Memory?
+            </h3>
+            <p className="text-sm text-slate-300 mb-6">
+              Are you sure you want to delete all rungs? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setIsClearModalOpen(false)}
+                className="px-4 py-2 rounded-lg font-bold text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onChangeRungs([{ id: `r_${Date.now()}`, comment: 'Rung 000: Control logic', items: [] }]);
+                  setIsClearModalOpen(false);
+                }}
+                className="px-4 py-2 rounded-lg font-bold text-sm bg-red-900/50 text-red-400 border border-red-900/50 hover:bg-red-900 hover:text-red-200 transition"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1090,7 +1126,7 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         {item.type === 'OTU' && '-(U)-'}
         {item.type === 'TON' && '[TON]'}
         {item.type === 'RES' && '-(RES)-'}
-        {['MOV', 'EQU', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type) && `[${item.type}]`}
+        {['ONS', 'OSR', 'OSF', 'MOV', 'EQU', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type) && `[${item.type}]`}
       </div>
 
       {/* Controls Overlay */}

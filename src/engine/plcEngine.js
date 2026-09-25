@@ -11,6 +11,7 @@ export class PLCEngine {
     this.listeners = new Set();
     this.currentRungs = [];
     this.latchedOutputs = new Set(); // Tracks addresses set by OTL until OTU
+    this.onsStates = new Map(); // Tracks previous power state for one-shots
   }
 
   subscribe(listener) {
@@ -37,6 +38,7 @@ export class PLCEngine {
       clearInterval(this.scanInterval);
       this.scanInterval = null;
     }
+    this.onsStates.clear();
   }
 
   // Address lookup helper
@@ -125,6 +127,7 @@ export class PLCEngine {
     const addr = normalizeAddress(rawAddr);
     if (!addr) return;
     const num = Number(val);
+    if (!Number.isFinite(num)) return;
 
     if (addr.startsWith('N7:')) {
       const idx = parseInt(addr.replace('N7:', ''), 10);
@@ -140,7 +143,7 @@ export class PLCEngine {
   // Execute authentic 4-phase scan cycle
   executeScanCycle(forceRungs = null) {
     const t0 = performance.now();
-    const dtSeconds = Math.max(0.01, (t0 - this.lastScanTime) / 1000);
+    const dtSeconds = Math.max(0, (t0 - this.lastScanTime) / 1000);
     this.lastScanTime = t0;
 
     const rungs = forceRungs || this.currentRungs || [];
@@ -161,36 +164,19 @@ export class PLCEngine {
     }
 
     // Phase 3: Output Update
-    // Apply OTE coil results:
-    // Any output address (O:0/0 .. O:0/7, B3:0/0 ..) that is NOT latched by an active OTL
-    // takes its state from oteEvaluations. If it was NOT driven by any OTE coil in the active logic,
-    // it resets to false (OFF)!
+    // Writes already occurred in program order. Clear unreferenced physical outputs.
     for (let o = 0; o < 8; o++) {
       const oAddr = `O:0/${o}`;
-      if (this.latchedOutputs.has(oAddr)) {
-        this.data.bits[oAddr] = true;
-      } else if (oteEvaluations.has(oAddr)) {
-        this.data.bits[oAddr] = oteEvaluations.get(oAddr);
-      } else {
+      if (!this.latchedOutputs.has(oAddr) && !oteEvaluations.has(oAddr)) {
         // Output not in program -> turn OFF!
         this.data.bits[oAddr] = false;
-      }
-    }
-
-    // Internal binary bits B3
-    for (let b = 0; b < 16; b++) {
-      const bAddr = `B3:0/${b}`;
-      if (this.latchedOutputs.has(bAddr)) {
-        this.data.bits[bAddr] = true;
-      } else if (oteEvaluations.has(bAddr)) {
-        this.data.bits[bAddr] = oteEvaluations.get(bAddr);
       }
     }
 
     const tEnd = performance.now();
     this.data.S2.scanCount++;
     this.data.S2.lastScanMs = +(tEnd - t0).toFixed(2);
-    this.data.S2.runTimeSec = +(this.data.S2.runTimeSec + dtSeconds).toFixed(1);
+    this.data.S2.runTimeSec += dtSeconds;
 
     const scanResult = {
       scanCount: this.data.S2.scanCount,
@@ -272,11 +258,33 @@ export class PLCEngine {
         break;
       }
 
+      case 'ONS':
+      case 'OSR': {
+        // One Shot / One Shot Rising: conducts for exactly one scan when powerIn transitions false -> true
+        const prevState = this.onsStates.get(item.id) || false;
+        this.onsStates.set(item.id, powerIn);
+        powerOut = powerIn && !prevState;
+        active = powerOut; // only active for the one scan it conducts
+        break;
+      }
+
+      case 'OSF': {
+        // One Shot Falling: conducts for exactly one scan when powerIn transitions true -> false
+        // Note: For OSF, powerOut can be true even if powerIn is false!
+        const prevState = this.onsStates.get(item.id) || false;
+        this.onsStates.set(item.id, powerIn);
+        powerOut = !powerIn && prevState;
+        active = powerOut;
+        break;
+      }
+
       case 'OTE': {
         // Standard Coil: tracks state into oteEvaluations
         active = powerIn;
-        if (operand) {
+        if (/^(O:0\/\d+|B3:0\/\d+)$/.test(operand) && Object.hasOwn(this.data.bits, operand)) {
           oteEvaluations.set(operand, powerIn);
+          this.latchedOutputs.delete(operand);
+          this.setBit(operand, powerIn);
         }
         powerOut = powerIn;
         break;
@@ -284,7 +292,7 @@ export class PLCEngine {
 
       case 'OTL': {
         // Latch Output: if rung is true, latches bit ON
-        if (powerIn && operand) {
+        if (powerIn && /^(O:0\/\d+|B3:0\/\d+)$/.test(operand) && Object.hasOwn(this.data.bits, operand)) {
           this.latchedOutputs.add(operand);
           this.setBit(operand, true);
         }
@@ -295,7 +303,7 @@ export class PLCEngine {
 
       case 'OTU': {
         // Unlatch Output: if rung is true, removes latch and sets to false
-        if (powerIn && operand) {
+        if (powerIn && /^(O:0\/\d+|B3:0\/\d+)$/.test(operand) && Object.hasOwn(this.data.bits, operand)) {
           this.latchedOutputs.delete(operand);
           this.setBit(operand, false);
           if (oteEvaluations.has(operand)) {
@@ -309,16 +317,17 @@ export class PLCEngine {
 
       case 'TON': {
         // Timer On Delay
-        const tIdx = parseInt(String(operand).replace(/^T4:/, ''), 10) || 0;
-        const timer = this.data.T4[tIdx] || { PRE: 1.0, ACC: 0.0, EN: false, TT: false, DN: false };
-        if (params.pre !== undefined) timer.PRE = parseFloat(params.pre);
+        const match = operand.match(/^T4:(\d+)$/);
+        const timer = match && this.data.T4[Number(match[1])];
+        if (!timer) break;
+        if (params.pre !== undefined && Number.isFinite(Number(params.pre)) && Number(params.pre) >= 0) timer.PRE = Number(params.pre);
 
         if (powerIn) {
           timer.EN = true;
           if (timer.ACC < timer.PRE) {
             timer.TT = true;
             timer.DN = false;
-            timer.ACC = +(timer.ACC + dtSeconds).toFixed(2);
+            timer.ACC += dtSeconds;
             if (timer.ACC >= timer.PRE) {
               timer.ACC = timer.PRE;
               timer.TT = false;
@@ -342,7 +351,8 @@ export class PLCEngine {
       case 'RES': {
         // Reset Timer
         if (powerIn) {
-          const tIdx = parseInt(String(operand).replace(/^T4:/, ''), 10) || 0;
+          const match = operand.match(/^T4:(\d+)$/);
+          const tIdx = match ? Number(match[1]) : -1;
           if (this.data.T4[tIdx]) {
             this.data.T4[tIdx].ACC = 0.0;
             this.data.T4[tIdx].EN = false;

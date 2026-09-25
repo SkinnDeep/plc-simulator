@@ -70,18 +70,10 @@ export function SpotlightTour({
   const step = steps[currentStep];
 
   useEffect(() => {
-    if (!isActive) return;
-
-    // Check if current step is complete
-    if (step && step.isComplete()) {
-      if (currentStep < steps.length - 1) {
-        setCurrentStep(s => s + 1);
-      } else {
-        // Finished!
-        setTimeout(() => onComplete(), 1500);
-      }
+    if (isActive) {
+      setCurrentStep(0);
     }
-  }, [isActive, currentStep, step, rungs, isRunning, plcData, onComplete]);
+  }, [isActive]);
 
   // Track element position
   useEffect(() => {
@@ -137,7 +129,7 @@ export function SpotlightTour({
   return (
     <div className="fixed inset-0 z-[9999] pointer-events-none">
       {/* SVG Overlay to create the cutout */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-auto">
+      <svg className="absolute inset-0 w-full h-full pointer-events-none">
         <defs>
           <mask id="spotlight-mask">
             <rect x="0" y="0" width="100%" height="100%" fill="white" />
@@ -179,21 +171,51 @@ export function SpotlightTour({
           {step.text}
         </p>
 
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex gap-1">
-            {steps.map((_, i) => (
-              <div 
-                key={i} 
-                className={`w-1.5 h-1.5 rounded-full ${i === currentStep ? 'bg-cyan-400' : i < currentStep ? 'bg-emerald-500' : 'bg-slate-600'}`} 
-              />
-            ))}
-          </div>
-          
-          {currentStep === steps.length - 1 && step.isComplete() && (
-            <div className="text-emerald-400 text-xs font-bold flex items-center gap-1 animate-pulse">
-              <CheckCircle2 className="w-4 h-4" /> Finished!
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1">
+              {steps.map((_, i) => (
+                <div 
+                  key={i} 
+                  className={`w-1.5 h-1.5 rounded-full ${i === currentStep ? 'bg-cyan-400' : i < currentStep ? 'bg-emerald-500' : 'bg-slate-600'}`} 
+                />
+              ))}
             </div>
-          )}
+            
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={onComplete}
+                className="text-xs text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                Skip
+              </button>
+              {currentStep < steps.length - 1 ? (
+                <button
+                  onClick={() => setCurrentStep(s => s + 1)}
+                  disabled={!step.isComplete()}
+                  className={`px-3 py-1 text-xs font-bold rounded transition ${
+                    step.isComplete() 
+                      ? 'bg-cyan-500 text-slate-900 shadow-[0_0_10px_rgba(6,182,212,0.5)] cursor-pointer'
+                      : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  onClick={onComplete}
+                  disabled={!step.isComplete()}
+                  className={`px-3 py-1 text-xs font-bold rounded transition flex items-center gap-1 ${
+                    step.isComplete() 
+                      ? 'bg-emerald-500 text-slate-900 shadow-[0_0_10px_rgba(16,185,129,0.5)] cursor-pointer'
+                      : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Finish
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -16,9 +16,13 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning }) {
 
     window.addEventListener('mouseup', handleGlobalRelease);
     window.addEventListener('touchend', handleGlobalRelease);
+    window.addEventListener('blur', handleGlobalRelease);
+    window.addEventListener('pointercancel', handleGlobalRelease);
     return () => {
       window.removeEventListener('mouseup', handleGlobalRelease);
       window.removeEventListener('touchend', handleGlobalRelease);
+      window.removeEventListener('blur', handleGlobalRelease);
+      window.removeEventListener('pointercancel', handleGlobalRelease);
     };
   }, [activePress, onToggleInput]);
 
@@ -119,7 +123,7 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning }) {
 
         <div className="grid grid-cols-4 gap-2.5">
           {lamps.map((lamp) => (
-            <div key={lamp.addr} className="flex flex-col items-center gap-1.5">
+            <div key={lamp.addr} role="img" aria-label={`${lamp.name} lamp ${lamp.addr}: ${lamp.active ? 'on' : 'off'}`} className="flex flex-col items-center gap-1.5">
               <span className="text-[11px] font-mono font-bold text-slate-400">
                 {lamp.addr}
               </span>
@@ -174,7 +178,7 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning }) {
           <div className="flex flex-col items-center gap-1.5">
             <span className="text-[11px] font-mono font-bold text-slate-400">I:0/0</span>
             <button
-              onClick={() => onToggleInput('I:0/0', !isBitOn('I:0/0'))}
+              aria-label="Switch 1" aria-pressed={isBitOn('I:0/0')} onClick={() => onToggleInput('I:0/0', !isBitOn('I:0/0'))}
               className={`w-12 h-16 rounded-xl border-2 flex flex-col items-center justify-between p-1.5 transition-all cursor-pointer ${
                 isBitOn('I:0/0')
                   ? 'bg-emerald-950/60 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
@@ -204,7 +208,7 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning }) {
           <div className="flex flex-col items-center gap-1.5">
             <span className="text-[11px] font-mono font-bold text-slate-400">I:0/1</span>
             <button
-              onClick={() => onToggleInput('I:0/1', !isBitOn('I:0/1'))}
+              aria-label="Switch 2" aria-pressed={isBitOn('I:0/1')} onClick={() => onToggleInput('I:0/1', !isBitOn('I:0/1'))}
               className={`w-12 h-16 rounded-xl border-2 flex flex-col items-center justify-between p-1.5 transition-all cursor-pointer ${
                 isBitOn('I:0/1')
                   ? 'bg-emerald-950/60 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
@@ -234,6 +238,10 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning }) {
           <div className="flex flex-col items-center gap-1.5">
             <span className="text-[11px] font-mono font-bold text-slate-400">I:0/2</span>
             <button
+              aria-label="Green start pushbutton" aria-pressed={isBitOn('I:0/2')}
+              onKeyDown={(e) => { if ([' ', 'Enter'].includes(e.key)) { e.preventDefault(); if (!e.repeat) handlePressDown('I:0/2'); } }}
+              onKeyUp={(e) => { if ([' ', 'Enter'].includes(e.key)) { e.preventDefault(); handlePressUp('I:0/2'); } }}
+              onBlur={() => handlePressUp('I:0/2')}
               onMouseDown={() => handlePressDown('I:0/2')}
               onMouseUp={() => handlePressUp('I:0/2')}
               onMouseLeave={() => handlePressUp('I:0/2')}
@@ -260,6 +268,10 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning }) {
           <div className="flex flex-col items-center gap-1.5">
             <span className="text-[11px] font-mono font-bold text-slate-400">I:0/3</span>
             <button
+              aria-label="Red stop pushbutton" aria-pressed={isBitOn('I:0/3')}
+              onKeyDown={(e) => { if ([' ', 'Enter'].includes(e.key)) { e.preventDefault(); if (!e.repeat) handlePressDown('I:0/3'); } }}
+              onKeyUp={(e) => { if ([' ', 'Enter'].includes(e.key)) { e.preventDefault(); handlePressUp('I:0/3'); } }}
+              onBlur={() => handlePressUp('I:0/3')}
               onMouseDown={() => handlePressDown('I:0/3')}
               onMouseUp={() => handlePressUp('I:0/3')}
               onMouseLeave={() => handlePressUp('I:0/3')}

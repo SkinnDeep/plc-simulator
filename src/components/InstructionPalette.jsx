@@ -54,6 +54,7 @@ export function InstructionPalette({
       {icons.map(inst => (
         <button
           key={inst.type}
+          aria-label={inst.name}
           draggable={!inst.isBranch}
           onDragStart={(e) => !inst.isBranch && handleDragStart(e, { kind: 'instruction', type: inst.type, isOutput: inst.isOutput })}
           onClick={() => inst.isBranch ? onToggleBranchMode() : onAddInstruction(inst.type)}
@@ -77,6 +78,7 @@ export function InstructionPalette({
         {categories.map(cat => (
           <button
             key={cat}
+            aria-pressed={activeCategory === cat}
             onClick={() => setActiveCategory(cat)}
             className={`transition whitespace-nowrap cursor-pointer hover:text-white ${
               activeCategory === cat

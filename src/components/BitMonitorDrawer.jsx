@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Search, RotateCcw, Activity, ToggleLeft, ToggleRight, Database } from 'lucide-react';
 
 export function BitMonitorDrawer({
@@ -10,6 +10,23 @@ export function BitMonitorDrawer({
 }) {
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'inputs' | 'outputs' | 'b3' | 't4' | 'n7'
   const [filterText, setFilterText] = useState('');
+  const drawerRef = useRef(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.activeElement;
+    drawerRef.current?.querySelector('button')?.focus();
+    const handleKey = (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+      if (event.key === 'Tab') {
+        const controls = [...drawerRef.current.querySelectorAll('button:not(:disabled), input, select, [tabindex="0"]')];
+        const first = controls[0], last = controls.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => { document.removeEventListener('keydown', handleKey); previous?.focus(); };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -88,6 +105,7 @@ export function BitMonitorDrawer({
   return (
     <aside
       aria-label="PLC Data Table and Bit Monitor"
+      ref={drawerRef} id="bit-monitor" role="dialog" aria-label="Data Table Monitor"
       className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-slate-900/95 backdrop-blur-md border-l border-slate-700 shadow-2xl flex flex-col text-slate-100 transition-transform duration-200 ease-in-out font-sans"
     >
       {/* Drawer Header */}
@@ -121,6 +139,7 @@ export function BitMonitorDrawer({
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
+            aria-label="Search addresses"
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
             placeholder="Search address (e.g. I:0/0, O:0, N7:1)..."
@@ -167,6 +186,8 @@ export function BitMonitorDrawer({
                 <div
                   key={item.addr}
                   onClick={() => onToggleInput && onToggleInput(item.addr, !item.val)}
+                  role="button" tabIndex={0} aria-label={item.name} aria-pressed={item.val}
+                  onKeyDown={(e) => { if ([' ', 'Enter'].includes(e.key)) { e.preventDefault(); onToggleInput?.(item.addr, !item.val); } }}
                   className={`flex items-center justify-between px-3 py-1.5 rounded-lg border transition cursor-pointer ${
                     item.val
                       ? 'bg-emerald-950/60 border-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.2)]'

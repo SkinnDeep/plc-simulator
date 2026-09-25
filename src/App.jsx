@@ -21,7 +21,7 @@ const INITIAL_BLANK_RUNGS = [
 
 export function App() {
   const [plcData, setPlcData] = useState(() => createInitialDataModel());
-  const [isRunning, setIsRunning] = useState(true);
+  const [isRunning, setIsRunning] = useState(false);
   
   // History stack for Undo/Redo
   const [history, setHistory] = useState([INITIAL_BLANK_RUNGS]);
@@ -52,12 +52,12 @@ export function App() {
   const [loadNotice, setLoadNotice] = useState(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isBitMonitorOpen, setIsBitMonitorOpen] = useState(false);
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem('theme') === 'light' ? 'light' : 'dark'; } catch { return 'dark'; } });
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    localStorage.setItem('theme', next);
+    try { localStorage.setItem('theme', next); } catch { /* Storage is optional. */ }
   };
 
 
@@ -76,18 +76,18 @@ export function App() {
 
   // Check first-time tutorial
   useEffect(() => {
-    const hasSeen = localStorage.getItem('hasSeenPlcTutorial');
+    let hasSeen = true;
+    try { hasSeen = localStorage.getItem('hasSeenPlcTutorial'); } catch { /* Storage is optional. */ }
     if (!hasSeen) {
       setIsHelpOpen(true);
-      localStorage.setItem('hasSeenPlcTutorial', 'true');
+      try { localStorage.setItem('hasSeenPlcTutorial', 'true'); } catch { /* Storage is optional. */ }
     }
   }, []);
 
   // Synchronize rungs with engine
   useEffect(() => {
     engine.currentRungs = currentRungs;
-    const res = engine.executeScanCycle(currentRungs);
-    setScanResult(res);
+    setScanResult(null);
   }, [currentRungs, engine]);
 
   // Subscribe to scan ticks
@@ -129,9 +129,22 @@ export function App() {
     }
   };
 
+  const [showRunHint, setShowRunHint] = useState(false);
+
+  const triggerRunHint = () => {
+    setShowRunHint(true);
+    setTimeout(() => setShowRunHint(false), 2000);
+  };
+
   const handleToggleInput = (address, val) => {
     engine.setBit(address, val);
-    const res = engine.executeScanCycle(currentRungs);
+    
+    const hasBlocks = currentRungs.some(rung => rung.items && rung.items.length > 0);
+    if (!isRunning && hasBlocks) {
+      triggerRunHint();
+    }
+
+    const res = engine.isRunning ? engine.executeScanCycle(currentRungs) : null;
     setPlcData({
       bits: { ...engine.data.bits },
       T4: engine.data.T4.map(t => ({ ...t })),
@@ -148,8 +161,8 @@ export function App() {
     engine.data = fresh;
     if (engine.latchedOutputs) engine.latchedOutputs.clear();
     setPlcData(fresh);
-    const res = engine.executeScanCycle(currentRungs);
-    setScanResult(res);
+    engine.lastScanTime = performance.now();
+    setScanResult(null);
   };
 
   const handleSetRegister = (addr, val) => {
@@ -196,7 +209,7 @@ export function App() {
   };
 
   return (
-    <div className={`flex flex-col h-screen w-screen bg-slate-950 bg-grid-pattern text-slate-100 overflow-hidden font-sans ${theme === 'light' ? 'light-mode' : ''}`}>
+    <div className={`app-shell flex flex-col h-screen w-full bg-slate-950 bg-grid-pattern text-slate-100 overflow-hidden font-sans ${theme === 'light' ? 'light-mode' : ''}`}>
       {/* 1. Header Toolbar */}
       <Header
         isRunning={isRunning}
@@ -204,12 +217,13 @@ export function App() {
         onResetMemory={handleResetMemory}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        canUndo={historyIndex > 0}
-        canRedo={historyIndex < history.length - 1}
+        canUndo={!isRunning && historyIndex > 0}
+        canRedo={!isRunning && historyIndex < history.length - 1}
         activeMainTab={activeMainTab}
         onChangeMainTab={setActiveMainTab}
         onSelectSampleProgram={handleSelectSampleProgram}
         onOpenHelp={() => setIsHelpOpen(true)}
+        showRunHint={showRunHint}
         hasErrors={hasErrors}
         logicIssues={logicIssues}
         isBitMonitorOpen={isBitMonitorOpen}
@@ -220,7 +234,7 @@ export function App() {
 
       {/* Program Loaded Notification Banner */}
       {loadNotice && (
-        <div className="bg-emerald-500 text-slate-950 font-bold text-xs py-1.5 px-4 flex items-center justify-center gap-2 shadow-md">
+        <div role="status" className="bg-emerald-500 text-slate-950 font-bold text-xs py-1.5 px-4 flex items-center justify-center gap-2 shadow-md">
           <Check className="w-4 h-4 stroke-[3]" />
           <span>{loadNotice}</span>
         </div>
@@ -233,7 +247,7 @@ export function App() {
             {/* Mobile Sub-View Segmented Switch (visible on screens < lg) */}
             <div className="flex lg:hidden bg-slate-900 border border-slate-800 rounded-xl p-1 mb-2 font-bold text-xs shrink-0 shadow-sm">
               <button
-                onClick={() => setMobileView('ladder')}
+                aria-pressed={mobileView === 'ladder'} onClick={() => setMobileView('ladder')}
                 className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
                   mobileView === 'ladder'
                     ? 'bg-cyan-500 text-slate-950 shadow'
@@ -243,7 +257,7 @@ export function App() {
                 <span>🪜 Ladder Logic Canvas</span>
               </button>
               <button
-                onClick={() => setMobileView('bench')}
+                aria-pressed={mobileView === 'bench'} onClick={() => setMobileView('bench')}
                 className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
                   mobileView === 'bench'
                     ? 'bg-cyan-500 text-slate-950 shadow'
@@ -279,6 +293,7 @@ export function App() {
                   onUndo={handleUndo}
                   onRedo={handleRedo}
                   isRunning={isRunning}
+                  onStop={handleToggleRun}
                   logicIssues={logicIssues}
                 />
               </div>
@@ -306,15 +321,15 @@ export function App() {
       />
 
       {/* Logic Warnings Console Banner (Bottom) */}
-      {hasErrors && (
+      {logicIssues.length > 0 && (
         <div className="bg-amber-950/80 border-t border-amber-500/50 text-amber-200 px-4 py-2 text-xs font-mono max-h-32 overflow-y-auto shrink-0 shadow-[0_-5px_15px_rgba(245,158,11,0.1)]">
           <div className="font-bold flex items-center gap-2 mb-1">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-            <span>Compiler Warnings ({logicIssues.length})</span>
+            <span>Program checks ({logicIssues.length})</span>
           </div>
           <ul className="list-disc pl-8 space-y-0.5">
             {logicIssues.map((issue, idx) => (
-              <li key={idx} className="text-amber-300/80">{issue.message}</li>
+              <li key={idx} className="text-amber-300/80">{issue.message} <span className="text-amber-100">{issue.fix}</span></li>
             ))}
           </ul>
         </div>

@@ -1,5 +1,5 @@
 @echo off
-title RSLogix 500 PLC Simulator & Learning Lab
+title RSLogix 500 PLC Simulator and Learning Lab
 cd /d "%~dp0"
 
 echo ========================================================
