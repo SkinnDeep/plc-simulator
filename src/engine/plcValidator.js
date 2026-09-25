@@ -2,20 +2,21 @@
 // Provides clear, express diagnostic messages stating what the error is and how to fix it.
 import { normalizeAddress, INSTRUCTION_TYPES } from '../types/plcTypes.js';
 
-export function validateLadderLogic(rungs) {
+export function validateLadderLogic(rungs, strictMode = false) {
   const issues = [];
   const oteAddresses = new Map(); // addr -> [rungIdx]
 
   if (!rungs || !Array.isArray(rungs) || rungs.length === 0) {
-    return [
-      {
+    if (strictMode) {
+      issues.push({
         severity: 'error',
         rungIdx: 0,
         title: 'No Ladder Rungs',
         message: 'The program has no rungs.',
         fix: 'Click "+ Add New Rung" to begin building your ladder logic.'
-      }
-    ];
+      });
+    }
+    return issues;
   }
 
   rungs.forEach((rung, rIdx) => {
@@ -24,13 +25,15 @@ export function validateLadderLogic(rungs) {
 
     // 1. Check for empty rung
     if (items.length === 0) {
-      issues.push({
-        severity: 'error',
-        rungIdx: rIdx,
-        title: `Empty Rung ${rIdx}`,
-        message: `Rung ${rIdx} has no instructions or contacts.`,
-        fix: `Drag a contact (e.g. -[ ]- XIC) and an output coil (e.g. -( )- OTE) onto Rung ${rIdx}.`
-      });
+      if (strictMode) {
+        issues.push({
+          severity: 'error',
+          rungIdx: rIdx,
+          title: `Empty Rung ${rIdx}`,
+          message: `Rung ${rIdx} has no instructions or contacts.`,
+          fix: `Drag a contact (e.g. -] [- XIC) and an output coil (e.g. -( )- OTE) onto Rung ${rIdx}.`
+        });
+      }
       return;
     }
 
@@ -59,14 +62,16 @@ export function validateLadderLogic(rungs) {
         }
         branches.forEach((b, bIdx) => {
           if (!Array.isArray(b) || b.length === 0) {
-            issues.push({
-              severity: 'error',
-              rungIdx: rIdx,
-              elemId: item.id,
-              title: `Empty Branch Path on Rung ${rIdx}`,
-              message: `Path ${bIdx === 0 ? 'A' : 'B'} of the parallel split has no contacts. A direct short without a contact will bypass the other path.`,
-              fix: `Drag an input contact into Path ${bIdx === 0 ? 'A' : 'B'}, or remove the empty branch.`
-            });
+            if (strictMode) {
+              issues.push({
+                severity: 'error',
+                rungIdx: rIdx,
+                elemId: item.id,
+                title: `Empty Branch Path on Rung ${rIdx}`,
+                message: `Path ${bIdx === 0 ? 'A' : 'B'} of the parallel split has no contacts. A direct short without a contact will bypass the other path.`,
+                fix: `Drag an input contact into Path ${bIdx === 0 ? 'A' : 'B'}, or remove the empty branch.`
+              });
+            }
           } else {
             b.forEach(checkItem);
           }

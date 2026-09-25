@@ -23,7 +23,7 @@ export function Header({
   onToggleTheme
 }) {
   return (
-    <header className={`app-header bg-[#1e1e1e] border-b-2 text-slate-100 px-3 sm:px-4 py-2 flex flex-nowrap items-center justify-between gap-4 shadow-xl select-none ${isRunning ? 'border-t-4 border-t-emerald-500 border-b-[#2d2d2d]' : 'border-t-4 border-t-slate-700 border-b-[#2d2d2d]'}`}>
+    <header className={`app-header bg-[#1e1e1e] border-b-2 text-slate-100 px-3 sm:px-4 py-2 flex flex-nowrap overflow-x-auto items-center justify-between gap-4 shadow-xl select-none ${isRunning ? 'border-t-4 border-t-emerald-500 border-b-[#2d2d2d]' : 'border-t-4 border-t-slate-700 border-b-[#2d2d2d]'}`}>
       {/* Brand & Processor Status */}
       <div className="flex items-center gap-2.5">
         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-red-600 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-md shrink-0">
@@ -134,25 +134,18 @@ export function Header({
           ))}
         </select>
 
-        {/* Real-Time Logic Diagnostic Status */}
-        <div className={`group relative hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold cursor-help ${
-          logicIssues?.length > 0
-            ? 'bg-amber-950/60 border-amber-600 text-amber-300'
-            : 'bg-emerald-950/40 border-emerald-600 text-emerald-300'
-        }`}>
+        <div 
+          className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold cursor-help ${
+            logicIssues?.length > 0
+              ? 'bg-amber-950/60 border-amber-600 text-amber-300'
+              : 'bg-emerald-950/40 border-emerald-600 text-emerald-300'
+          }`}
+          title={logicIssues?.length > 0 ? `Logic Warnings:\n${logicIssues.map(i => '- ' + i.message).join('\n')}` : "No issues found"}
+        >
           {logicIssues?.length > 0 ? (
             <>
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
               <span>Logic Warning ({logicIssues?.length || 0})</span>
-              {/* Tooltip */}
-              <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-amber-600 shadow-xl rounded-lg p-3 hidden group-hover:block z-50">
-                <div className="font-bold text-amber-500 mb-1">Logic Warnings:</div>
-                <ul className="list-disc pl-4 space-y-1 text-slate-300 font-sans font-normal">
-                  {logicIssues?.map((issue, idx) => (
-                    <li key={idx}>{issue.message}</li>
-                  ))}
-                </ul>
-              </div>
             </>
           ) : (
             <>

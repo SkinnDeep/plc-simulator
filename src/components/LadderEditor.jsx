@@ -742,17 +742,17 @@ export function LadderEditor({
               </div>
 
               {/* Rung Schematic Line */}
-              <div className="flex items-center gap-3 relative py-2 min-h-[90px]">
+              <div className="flex items-center gap-3 relative py-1 min-h-[70px]">
                 {/* L1 Power Rail (Left) */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className={`w-2.5 h-24 rounded-full transition-all duration-150 ${
+                  <div className={`w-2 h-16 sm:h-20 rounded-full transition-all duration-150 ${
                     conducting ? 'bg-emerald-400 shadow-[0_0_12px_#10b981]' : 'bg-blue-600'
                   }`} />
                   <span className="text-[10px] font-mono font-bold text-blue-400 mt-1">L1</span>
                 </div>
 
                 {/* Conductor & Instruction Wire Area */}
-                <div className="flex-1 flex items-center justify-between px-2 relative min-h-[90px] overflow-x-auto">
+                <div className="flex-1 flex items-center justify-between px-2 relative min-h-[70px] overflow-x-auto">
                   {/* Background Conductor Wire */}
                   <div className={`absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-150 ${
                     conducting ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-slate-700'
@@ -983,7 +983,7 @@ export function LadderEditor({
 
                 {/* L2 Neutral Rail (Right) */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className="w-2.5 h-24 rounded-full bg-slate-600" />
+                  <div className="w-2 h-16 sm:h-20 rounded-full bg-slate-600" />
                   <span className="text-[10px] font-mono font-bold text-slate-500 mt-1">L2</span>
                 </div>
               </div>

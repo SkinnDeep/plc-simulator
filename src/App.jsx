@@ -76,10 +76,7 @@ export function App() {
   const [hasAttemptedRun, setHasAttemptedRun] = useState(false);
 
   // Real-time ladder logic error validation
-  const rawLogicIssues = validateLadderLogic(currentRungs);
-  const logicIssues = hasAttemptedRun 
-    ? rawLogicIssues 
-    : rawLogicIssues.filter(i => !i.title.includes('Empty'));
+  const logicIssues = validateLadderLogic(currentRungs, hasAttemptedRun);
   const hasErrors = logicIssues.some(i => i.severity === 'error');
 
   // Check first-time tutorial
@@ -133,7 +130,7 @@ export function App() {
       setIsRunning(false);
     } else {
       setHasAttemptedRun(true);
-      const allIssues = validateLadderLogic(currentRungs);
+      const allIssues = validateLadderLogic(currentRungs, true);
       if (allIssues.some(i => i.severity === 'error')) {
         return;
       }
