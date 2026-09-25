@@ -36,14 +36,17 @@ export function App() {
     if (newHistory.length > 50) newHistory.shift();
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
+    setHasAttemptedRun(false);
   };
 
   const handleUndo = () => {
     if (historyIndex > 0) setHistoryIndex(historyIndex - 1);
+    setHasAttemptedRun(false);
   };
 
   const handleRedo = () => {
     if (historyIndex < history.length - 1) setHistoryIndex(historyIndex + 1);
+    setHasAttemptedRun(false);
   };
 
   const [scanResult, setScanResult] = useState(null);
@@ -70,8 +73,13 @@ export function App() {
 
   const engine = engineRef.current;
 
+  const [hasAttemptedRun, setHasAttemptedRun] = useState(false);
+
   // Real-time ladder logic error validation
-  const logicIssues = validateLadderLogic(currentRungs);
+  const rawLogicIssues = validateLadderLogic(currentRungs);
+  const logicIssues = hasAttemptedRun 
+    ? rawLogicIssues 
+    : rawLogicIssues.filter(i => !i.title.includes('Empty'));
   const hasErrors = logicIssues.some(i => i.severity === 'error');
 
   // Check first-time tutorial
@@ -124,6 +132,11 @@ export function App() {
       engine.stop();
       setIsRunning(false);
     } else {
+      setHasAttemptedRun(true);
+      const allIssues = validateLadderLogic(currentRungs);
+      if (allIssues.some(i => i.severity === 'error')) {
+        return;
+      }
       engine.start();
       setIsRunning(true);
     }
