@@ -24,24 +24,25 @@ export function SpotlightTour({
     {
       id: 'tour-add-contact',
       targetId: ['tour-palette', 'tour-rungs'],
-      anchorId: 'tour-rungs',
+      anchorId: 'tour-palette',
       title: 'Step 2: Add an Input Contact',
       text: 'Click the XIC (-] [-) button in the palette to add a Normally Open contact to your rung.',
       isComplete: () => rungs[0]?.items?.some(it => !['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(it.type)),
-      position: 'bottom'
+      position: 'bottom-right'
     },
     {
       id: 'tour-add-coil',
       targetId: ['tour-palette', 'tour-rungs'],
-      anchorId: 'tour-rungs',
+      anchorId: 'tour-palette',
       title: 'Step 3: Add an Output Coil',
       text: 'Now click the OTE (-( )-) button to add an output coil to the end of your rung.',
       isComplete: () => rungs[0]?.items?.some(it => ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(it.type)),
-      position: 'bottom'
+      position: 'bottom-right'
     },
     {
       id: 'tour-assign-address',
       targetId: 'tour-rungs',
+      anchorId: 'tour-palette',
       title: 'Step 4: Assign I/O Addresses',
       text: 'Click the "Assign" button above your new instructions. Set the input to Switch 1 (I:0/0) and the output to Amber Lamp 1 (O:0/0).',
       isComplete: () => {
@@ -49,7 +50,7 @@ export function SpotlightTour({
         const hasO = rungs[0]?.items?.some(it => it.operand === 'O:0/0');
         return hasI && hasO;
       },
-      position: 'top'
+      position: 'bottom-right'
     },
     {
       id: 'tour-run',
@@ -131,10 +132,14 @@ export function SpotlightTour({
   let tooltipStyle = {};
   if (step.position === 'bottom') {
     tooltipStyle = { top: top + height + 10, left: Math.max(10, left + width / 2 - 150) };
+  } else if (step.position === 'bottom-right') {
+    tooltipStyle = { top: top + height + 10, left: Math.max(10, left + width - 320) };
   } else if (step.position === 'top') {
     tooltipStyle = { top: Math.max(10, top - 120), left: Math.max(10, left + width / 2 - 150) };
   } else if (step.position === 'right') {
     tooltipStyle = { top: top + height / 2 - 60, left: left + width + 10 };
+  } else if (step.position === 'center') {
+    tooltipStyle = { top: top + height / 2 - 60, left: Math.max(10, left + width / 2 - 150) };
   } else {
     tooltipStyle = { top: top + height + 10, left };
   }
