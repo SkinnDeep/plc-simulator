@@ -1152,60 +1152,83 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
   const liveTimer = (plcData && tId !== null && plcData.T4) ? plcData.T4[Number(tId)] : null;
   
   const acc = liveTimer ? liveTimer.ACC.toFixed(0) : '0';
+  const enActive = liveTimer ? liveTimer.EN : false;
+  const ttActive = liveTimer ? liveTimer.TT : false;
+  const dnActive = liveTimer ? liveTimer.DN : false;
   
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      className={`flex flex-col border-2 ${borderColor} rounded overflow-hidden select-none relative cursor-pointer min-w-[120px] shadow-md mx-2 ${isSelected ? 'ring-2 ring-cyan-500' : ''}`}
+      className={`flex flex-col border-2 ${borderColor} rounded overflow-hidden select-none relative cursor-pointer min-w-[140px] shadow-md mx-2 ${isSelected ? 'ring-2 ring-cyan-500' : ''}`}
     >
       <div className={`${bgHeader} px-2 py-1 border-b ${borderColor} flex justify-between items-center`}>
         <span className={`text-[10px] font-bold ${color}`}>TON</span>
         <span className="text-[9px] text-slate-400 font-mono ml-2">Timer On Delay</span>
       </div>
-      <div className={`${bgBody} p-2 flex flex-col gap-1.5`}>
-        <div className="flex justify-between items-center text-[10px]">
-          <span className="text-slate-400 mr-2">Timer</span>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
-            className={`font-mono font-bold px-1 rounded ${item.operand ? 'text-cyan-300 hover:bg-slate-700' : 'text-slate-500 bg-slate-800'}`}
-            title="Click to assign Timer address"
-          >
-            {item.operand || 'Assign'}
-          </button>
+      
+      <div className="flex">
+        {/* Left Side: Parameters */}
+        <div className={`${bgBody} p-2 flex flex-col gap-1.5 flex-1 border-r border-[#3c414a]`}>
+          <div className="flex justify-between items-center text-[10px]">
+            <span className="text-slate-400 mr-2">Timer</span>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
+              className={`font-mono font-bold px-1 rounded ${item.operand ? 'text-cyan-300 hover:bg-slate-700' : 'text-slate-500 bg-slate-800'}`}
+              title="Click to assign Timer address"
+            >
+              {item.operand || 'Assign'}
+            </button>
+          </div>
+          
+          <div className="flex justify-between items-center text-[10px]">
+            <span className="text-slate-400 mr-2">Time Base</span>
+            <select 
+              value={item.params?.timeBase !== undefined ? item.params.timeBase : 1.0}
+              onChange={(e) => {
+                const tb = Number(e.target.value);
+                onUpdate({ params: { ...(item.params || {}), timeBase: tb } });
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="font-mono text-cyan-300 bg-slate-900 border border-slate-700 hover:border-slate-500 focus:outline-none w-[50px] text-right rounded px-1 py-0.5 cursor-pointer"
+            >
+              <option value={1.0}>1.0</option>
+              <option value={0.1}>0.1</option>
+              <option value={0.01}>0.01</option>
+            </select>
+          </div>
+          
+          <div className="flex justify-between items-center text-[10px]">
+            <span className="text-slate-400 mr-2">Preset</span>
+            <input 
+              type="number"
+              min="0"
+              value={item.params?.pre !== undefined ? item.params.pre : 50}
+              onChange={(e) => onUpdate({ params: { ...(item.params || {}), pre: Number(e.target.value) } })}
+              onClick={(e) => e.stopPropagation()}
+              className="font-mono text-cyan-300 bg-slate-900 border border-slate-700 hover:border-slate-500 focus:outline-none w-[50px] text-right rounded px-1 py-0.5"
+            />
+          </div>
+          
+          <div className="flex justify-between items-center text-[10px]">
+            <span className="text-slate-400 mr-2">Accum</span>
+            <span className={`font-mono font-bold bg-slate-900 border border-transparent px-1 py-0.5 rounded w-[50px] text-right ${isActive ? 'text-emerald-400' : 'text-slate-300'}`}>{acc}</span>
+          </div>
         </div>
         
-        <div className="flex justify-between items-center text-[10px]">
-          <span className="text-slate-400 mr-2">Time Base</span>
-          <select 
-            value={item.params?.timeBase !== undefined ? item.params.timeBase : 1.0}
-            onChange={(e) => {
-              const tb = Number(e.target.value);
-              onUpdate({ params: { ...(item.params || {}), timeBase: tb } });
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="font-mono text-cyan-300 bg-slate-900 border border-slate-700 hover:border-slate-500 focus:outline-none w-[50px] text-right rounded px-1 py-0.5 cursor-pointer"
-          >
-            <option value={1.0}>1.0</option>
-            <option value={0.1}>0.1</option>
-            <option value={0.01}>0.01</option>
-          </select>
-        </div>
-        
-        <div className="flex justify-between items-center text-[10px]">
-          <span className="text-slate-400 mr-2">Preset</span>
-          <input 
-            type="number"
-            min="0"
-            value={item.params?.pre !== undefined ? item.params.pre : 50}
-            onChange={(e) => onUpdate({ params: { ...(item.params || {}), pre: Number(e.target.value) } })}
-            onClick={(e) => e.stopPropagation()}
-            className="font-mono text-cyan-300 bg-slate-900 border border-slate-700 hover:border-slate-500 focus:outline-none w-[50px] text-right rounded px-1 py-0.5"
-          />
-        </div>
-        
-        <div className="flex justify-between items-center text-[10px]">
-          <span className="text-slate-400 mr-2">Accum</span>
-          <span className={`font-mono font-bold bg-slate-900 border border-transparent px-1 py-0.5 rounded w-[50px] text-right ${isActive ? 'text-emerald-400' : 'text-slate-300'}`}>{acc}</span>
+        {/* Right Side: Output Coils (EN, TT, DN) */}
+        <div className={`${bgBody} flex flex-col items-center justify-between py-1 px-1 w-10 shrink-0 bg-[#1e2025]`}>
+          <div className="flex flex-col items-center">
+            <span className={`text-[8px] font-mono font-bold mb-0.5 ${enActive ? 'text-emerald-400' : 'text-slate-500'}`}>(EN)</span>
+            <div className={`w-2 h-2 rounded-full ${enActive ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-slate-700'}`} />
+          </div>
+          <div className="flex flex-col items-center">
+            <span className={`text-[8px] font-mono font-bold mb-0.5 ${ttActive ? 'text-emerald-400' : 'text-slate-500'}`}>(TT)</span>
+            <div className={`w-2 h-2 rounded-full ${ttActive ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-slate-700'}`} />
+          </div>
+          <div className="flex flex-col items-center">
+            <span className={`text-[8px] font-mono font-bold mb-0.5 ${dnActive ? 'text-emerald-400' : 'text-slate-500'}`}>(DN)</span>
+            <div className={`w-2 h-2 rounded-full ${dnActive ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-slate-700'}`} />
+          </div>
         </div>
       </div>
       
