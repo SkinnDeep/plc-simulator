@@ -320,14 +320,19 @@ export class PLCEngine {
         const match = operand.match(/^T4:(\d+)$/);
         const timer = match && this.data.T4[Number(match[1])];
         if (!timer) break;
+        
+        if (params.timeBase !== undefined) timer.timeBase = Number(params.timeBase);
         if (params.pre !== undefined && Number.isFinite(Number(params.pre)) && Number(params.pre) >= 0) timer.PRE = Number(params.pre);
+
+        if (!timer._elapsed) timer._elapsed = 0;
 
         if (powerIn) {
           timer.EN = true;
           if (timer.ACC < timer.PRE) {
             timer.TT = true;
             timer.DN = false;
-            timer.ACC += dtSeconds;
+            timer._elapsed += dtSeconds;
+            timer.ACC = Math.floor(timer._elapsed / timer.timeBase);
             if (timer.ACC >= timer.PRE) {
               timer.ACC = timer.PRE;
               timer.TT = false;
@@ -341,7 +346,8 @@ export class PLCEngine {
           timer.EN = false;
           timer.TT = false;
           timer.DN = false;
-          timer.ACC = 0.0;
+          timer.ACC = 0;
+          timer._elapsed = 0;
         }
         active = timer.DN;
         powerOut = powerIn;
@@ -354,7 +360,8 @@ export class PLCEngine {
           const match = operand.match(/^T4:(\d+)$/);
           const tIdx = match ? Number(match[1]) : -1;
           if (this.data.T4[tIdx]) {
-            this.data.T4[tIdx].ACC = 0.0;
+            this.data.T4[tIdx].ACC = 0;
+            this.data.T4[tIdx]._elapsed = 0;
             this.data.T4[tIdx].EN = false;
             this.data.T4[tIdx].TT = false;
             this.data.T4[tIdx].DN = false;
