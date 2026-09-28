@@ -9,7 +9,7 @@ export function SpotlightTour({
   plcData
 }) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [targetRect, setTargetRect] = useState(null);
+  const [targetRects, setTargetRects] = useState([]);
 
   // Define the tour steps and their completion conditions
   const steps = React.useMemo(() => [
@@ -23,7 +23,8 @@ export function SpotlightTour({
     },
     {
       id: 'tour-add-contact',
-      targetId: 'tour-palette',
+      targetId: ['tour-palette', 'tour-rungs'],
+      anchorId: 'tour-rungs',
       title: 'Step 2: Add an Input Contact',
       text: 'Click the XIC (-] [-) button in the palette to add a Normally Open contact to your rung.',
       isComplete: () => rungs[0]?.items?.some(it => !['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(it.type)),
@@ -31,7 +32,8 @@ export function SpotlightTour({
     },
     {
       id: 'tour-add-coil',
-      targetId: 'tour-palette',
+      targetId: ['tour-palette', 'tour-rungs'],
+      anchorId: 'tour-rungs',
       title: 'Step 3: Add an Output Coil',
       text: 'Now click the OTE (-( )-) button to add an output coil to the end of your rung.',
       isComplete: () => rungs[0]?.items?.some(it => ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(it.type)),
@@ -41,7 +43,7 @@ export function SpotlightTour({
       id: 'tour-assign-address',
       targetId: 'tour-rungs',
       title: 'Step 4: Assign I/O Addresses',
-      text: 'Click the "Assign ⌄" button above your new instructions. Set the input to Switch 1 (I:0/0) and the output to Amber Lamp 1 (O:0/0).',
+      text: 'Click the "Assign" button above your new instructions. Set the input to Switch 1 (I:0/0) and the output to Amber Lamp 1 (O:0/0).',
       isComplete: () => {
         const hasI = rungs[0]?.items?.some(it => it.operand === 'I:0/0');
         const hasO = rungs[0]?.items?.some(it => it.operand === 'O:0/0');
@@ -80,16 +82,23 @@ export function SpotlightTour({
     if (!isActive || !step) return;
 
     const updateRect = () => {
-      const el = document.getElementById(step.targetId);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        setTargetRect(prev => {
-          if (!prev || prev.top !== rect.top || prev.left !== rect.left || prev.width !== rect.width || prev.height !== rect.height) {
-            return rect;
+      const ids = Array.isArray(step.targetId) ? step.targetId : [step.targetId];
+      const rects = ids.map(id => {
+        const el = document.getElementById(id);
+        return el ? el.getBoundingClientRect() : null;
+      }).filter(Boolean);
+
+      setTargetRects(prev => {
+        if (prev.length !== rects.length) return rects;
+        let changed = false;
+        for (let i = 0; i < rects.length; i++) {
+          if (prev[i].top !== rects[i].top || prev[i].left !== rects[i].left || prev[i].width !== rects[i].width || prev[i].height !== rects[i].height) {
+            changed = true;
+            break;
           }
-          return prev;
-        });
-      }
+        }
+        return changed ? rects : prev;
+      });
     };
 
     updateRect();
@@ -106,14 +115,18 @@ export function SpotlightTour({
     };
   }, [isActive, step]);
 
-  if (!isActive || !step || !targetRect) return null;
+  if (!isActive || !step || targetRects.length === 0) return null;
 
-  // Calculate tooltip placement
+  // Calculate tooltip placement off the primary (first) target
   const padding = 8;
-  const top = targetRect.top - padding;
-  const left = targetRect.left - padding;
-  const width = targetRect.width + padding * 2;
-  const height = targetRect.height + padding * 2;
+  const anchorId = step.anchorId || (Array.isArray(step.targetId) ? step.targetId[0] : step.targetId);
+  const anchorEl = document.getElementById(anchorId);
+  const primaryRect = anchorEl ? anchorEl.getBoundingClientRect() : targetRects[0];
+  
+  const top = primaryRect.top - padding;
+  const left = primaryRect.left - padding;
+  const width = primaryRect.width + padding * 2;
+  const height = primaryRect.height + padding * 2;
 
   let tooltipStyle = {};
   if (step.position === 'bottom') {
@@ -133,15 +146,18 @@ export function SpotlightTour({
         <defs>
           <mask id="spotlight-mask">
             <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            <rect
-              x={left}
-              y={top}
-              width={width}
-              height={height}
-              rx="8"
-              fill="black"
-              className="transition-all duration-300 ease-in-out"
-            />
+            {targetRects.map((rect, i) => (
+              <rect
+                key={i}
+                x={rect.left - padding}
+                y={rect.top - padding}
+                width={rect.width + padding * 2}
+                height={rect.height + padding * 2}
+                rx="8"
+                fill="black"
+                className="transition-all duration-300 ease-in-out"
+              />
+            ))}
           </mask>
         </defs>
         <rect
@@ -167,58 +183,45 @@ export function SpotlightTour({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-slate-300 text-xs leading-relaxed">
+        <p className="text-slate-300 text-xs leading-relaxed mb-4">
           {step.text}
         </p>
 
-        <div className="mt-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-1">
-              {steps.map((_, i) => (
-                <div 
-                  key={i} 
-                  className={`w-1.5 h-1.5 rounded-full ${i === currentStep ? 'bg-cyan-400' : i < currentStep ? 'bg-emerald-500' : 'bg-slate-600'}`} 
-                />
-              ))}
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={onComplete}
-                className="text-xs text-slate-400 hover:text-white transition cursor-pointer"
-              >
-                Skip
-              </button>
-              {currentStep < steps.length - 1 ? (
-                <button
-                  onClick={() => setCurrentStep(s => s + 1)}
-                  disabled={!step.isComplete()}
-                  className={`px-3 py-1 text-xs font-bold rounded transition ${
-                    step.isComplete() 
-                      ? 'bg-cyan-500 text-slate-900 shadow-[0_0_10px_rgba(6,182,212,0.5)] cursor-pointer'
-                      : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                  }`}
-                >
-                  Next
-                </button>
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1">
+            {steps.map((s, i) => (
+              <div 
+                key={s.id} 
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentStep ? 'bg-cyan-400 shadow-[0_0_5px_#22d3ee]' : i < currentStep ? 'bg-emerald-500' : 'bg-slate-700'}`} 
+              />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={onComplete}
+              className="text-xs text-slate-400 hover:text-white px-2 py-1 transition"
+            >
+              Skip
+            </button>
+            <button 
+              onClick={() => {
+                if (currentStep < steps.length - 1) {
+                  setCurrentStep(c => c + 1);
+                } else {
+                  onComplete();
+                }
+              }}
+              className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1.5 rounded text-xs transition active:scale-95 flex items-center gap-1"
+            >
+              {currentStep === steps.length - 1 ? (
+                <>Finish <CheckCircle2 className="w-3.5 h-3.5" /></>
               ) : (
-                <button
-                  onClick={onComplete}
-                  disabled={!step.isComplete()}
-                  className={`px-3 py-1 text-xs font-bold rounded transition flex items-center gap-1 ${
-                    step.isComplete() 
-                      ? 'bg-emerald-500 text-slate-900 shadow-[0_0_10px_rgba(16,185,129,0.5)] cursor-pointer'
-                      : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                  }`}
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Finish
-                </button>
+                'Next'
               )}
-            </div>
+            </button>
           </div>
         </div>
       </div>
     </div>
   );
 }
-export default SpotlightTour;
