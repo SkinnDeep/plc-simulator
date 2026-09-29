@@ -227,12 +227,12 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
 
         {/* Shear Blade */}
         <div 
-          className="absolute top-0 bottom-8 w-2 flex flex-col items-center"
+          className="absolute top-4 bottom-8 w-2 flex flex-col items-center"
           style={{ left: toPct(SHEAR_X) }}
         >
           {/* Cylinder Body */}
           <div className="w-8 h-12 bg-slate-600 border border-slate-500 z-10 relative">
-            <span className="absolute -top-4 -left-6 text-[8px] text-slate-400 font-mono whitespace-nowrap">SHEAR_CYL</span>
+            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] text-slate-400 font-mono whitespace-nowrap">SHEAR_CYL</span>
           </div>
           {/* Rod */}
           <div 
@@ -246,7 +246,7 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
         </div>
 
         {/* Limit Switches UI indicator */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1.5 text-[9px] font-mono bg-slate-900/60 p-2 rounded">
+        <div className="absolute top-2 right-2 flex flex-col gap-1.5 text-[9px] font-mono bg-slate-900/60 p-2 rounded">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${uiState.sensors.UP_LS ? 'bg-cyan-400 shadow-[0_0_5px_#22d3ee]' : 'bg-slate-700'}`} />
             <span className={uiState.sensors.UP_LS ? 'text-cyan-300 font-bold' : 'text-slate-500'}>UP_LS (I:0/4)</span>
