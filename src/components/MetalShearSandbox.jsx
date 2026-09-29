@@ -7,6 +7,7 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
   const conv1On = isBitOn('O:0/0');
   const conv2On = isBitOn('O:0/1');
   const bladeDown = isBitOn('O:0/2');
+  const conv3On = isBitOn('O:0/3');
 
   const containerRef = useRef(null);
 
@@ -35,9 +36,10 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
     sensors: { PROX: false, UP_LS: true, DOWN_LS: false }
   });
 
-  const SHEAR_X = 100;
-  const PROX_X = 170;
-  const DROP_X = 230;
+  const SHEAR_X = 80;
+  const END_CONV2_X = 180;
+  const PROX_X = 160;
+  const DROP_X = 280;
   const SPEED = 0.6;
   const BLADE_SPEED = 2.5;
 
@@ -79,13 +81,13 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
       }
 
       // Move Cut Sheets
-      if (conv2On) {
-        for (let s of cutSheets) {
+      for (let s of cutSheets) {
+        if ((s.tailX < END_CONV2_X && conv2On) || (s.headX > END_CONV2_X && conv3On)) {
           s.headX += SPEED;
           s.tailX += SPEED;
         }
-        cutSheets = cutSheets.filter(s => s.tailX < DROP_X);
       }
+      cutSheets = cutSheets.filter(s => s.tailX < DROP_X);
 
       // Update Sensors
       const proxOn = (stripX >= PROX_X) || cutSheets.some(s => s.tailX <= PROX_X && s.headX >= PROX_X);
@@ -182,12 +184,22 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
         {/* Conveyor 2 */}
         <div 
           className="absolute bottom-4 h-4 bg-slate-800 border-t border-slate-600 flex items-center justify-around overflow-hidden"
-          style={{ left: toPct(SHEAR_X + 2), right: 0 }}
+          style={{ left: toPct(SHEAR_X + 2), width: toPct(END_CONV2_X - SHEAR_X - 4) }}
         >
           <div className={`w-3 h-3 rounded-full border-2 border-slate-500 ${conv2On ? 'animate-spin' : ''}`} />
           <div className={`w-3 h-3 rounded-full border-2 border-slate-500 ${conv2On ? 'animate-spin' : ''}`} />
         </div>
-        <div className="absolute right-4 bottom-0 text-[8px] text-slate-500">Conv 2</div>
+        <div className="absolute bottom-0 text-[8px] text-slate-500" style={{ left: toPct((SHEAR_X + END_CONV2_X) / 2 - 10) }}>Conv 2</div>
+
+        {/* Conveyor 3 */}
+        <div 
+          className="absolute bottom-4 h-4 bg-slate-800 border-t border-slate-600 flex items-center justify-around overflow-hidden"
+          style={{ left: toPct(END_CONV2_X), right: 0 }}
+        >
+          <div className={`w-3 h-3 rounded-full border-2 border-slate-500 ${conv3On ? 'animate-spin' : ''}`} />
+          <div className={`w-3 h-3 rounded-full border-2 border-slate-500 ${conv3On ? 'animate-spin' : ''}`} />
+        </div>
+        <div className="absolute bottom-0 text-[8px] text-slate-500" style={{ left: toPct((END_CONV2_X + DROP_X) / 2 - 10) }}>Conv 3</div>
 
         {/* The Strip */}
         <div 
