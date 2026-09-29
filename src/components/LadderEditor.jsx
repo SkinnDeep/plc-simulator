@@ -35,7 +35,37 @@ const COMMON_ADDRESS_OPTIONS = [
   ]}
 ];
 
+const METAL_SHEAR_ADDRESS_OPTIONS = [
+  { group: 'Inputs (Switches & Sensors)', items: [
+    { addr: 'I:0/0', label: 'START_PB', desc: 'Start Pushbutton (N.O.)' },
+    { addr: 'I:0/1', label: 'STOP_PB', desc: 'Stop Pushbutton (N.C.)' },
+    { addr: 'I:0/2', label: 'PROX', desc: 'Proximity Sensor' },
+    { addr: 'I:0/3', label: 'DOWN_LS', desc: 'Shear Blade Down Limit' },
+    { addr: 'I:0/4', label: 'UP_LS', desc: 'Shear Blade Up Limit' }
+  ]},
+  { group: 'Outputs (Motors & Cylinders)', items: [
+    { addr: 'O:0/0', label: 'CONV1_MTR', desc: 'Conveyor 1 Motor' },
+    { addr: 'O:0/1', label: 'CONV2_MTR', desc: 'Conveyor 2 Motor' },
+    { addr: 'O:0/2', label: 'SHEAR_CYL_RET', desc: 'Shear Cylinder Retract' },
+    { addr: 'O:0/3', label: 'CONV3_MTR', desc: 'Conveyor 3 Motor' }
+  ]},
+  { group: 'Internal Relays (B3)', items: [
+    { addr: 'B3:0/0', label: 'Internal Bit 0', desc: 'Relay Flag 0' },
+    { addr: 'B3:0/1', label: 'Internal Bit 1', desc: 'Relay Flag 1' },
+    { addr: 'B3:0/2', label: 'Internal Bit 2', desc: 'Relay Flag 2' }
+  ]},
+  { group: 'Timers & Registers', items: [
+    { addr: 'T4:0', label: 'Timer T4:0', desc: 'Timer Block 0' },
+    { addr: 'T4:1', label: 'Timer T4:1', desc: 'Timer Block 1' },
+    { addr: 'T4:0.DN', label: 'T4:0 Done', desc: 'Timer 0 Done Bit' },
+    { addr: 'T4:0.TT', label: 'T4:0 Timing', desc: 'Timer 0 Timing Bit' },
+    { addr: 'T4:0.EN', label: 'T4:0 Enable', desc: 'Timer 0 Enable Bit' },
+    { addr: 'N7:0', label: 'Integer N7:0', desc: 'Math Register 0' }
+  ]}
+];
+
 export function LadderEditor({
+  activeSandbox,
   rungs,
   onChangeRungs,
   scanResult,
@@ -1149,31 +1179,36 @@ export function LadderEditor({
             </div>
 
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-              {COMMON_ADDRESS_OPTIONS.map((grp) => (
+              {(activeSandbox === 'MetalShear' ? METAL_SHEAR_ADDRESS_OPTIONS : COMMON_ADDRESS_OPTIONS).map((grp) => (
                 <div key={grp.group} className="space-y-1.5">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
                     {grp.group}
                   </span>
                   <div className="grid grid-cols-2 gap-2">
-                    {grp.items.map((item) => (
-                      <button
-                        key={item.addr}
-                        onClick={() => {
-                          handleUpdateItem(addressPickerTarget.rungIdx, addressPickerTarget.itemId, { operand: item.addr });
-                          setAddressPickerTarget(null);
-                        }}
-                        className="flex items-center justify-between p-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-cyan-400 text-left cursor-pointer transition active:scale-95"
-                      >
-                        <div>
-                          <span className="text-xs font-mono font-bold text-cyan-300 block">
-                            {item.addr}
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            {symbols?.[item.addr] || item.label}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
+                    {grp.items.map((item) => {
+                      const isDefaultPlc1 = ['Switch 1', 'Switch 2', 'Green PB', 'Red PB', 'Amber Lamp 1', 'Blue Lamp 2', 'Green Lamp 3', 'Red Lamp 4'].includes(symbols?.[item.addr]);
+                      const displayLabel = (symbols?.[item.addr] && !isDefaultPlc1) ? symbols[item.addr] : item.label;
+
+                      return (
+                        <button
+                          key={item.addr}
+                          onClick={() => {
+                            handleUpdateItem(addressPickerTarget.rungIdx, addressPickerTarget.itemId, { operand: item.addr });
+                            setAddressPickerTarget(null);
+                          }}
+                          className="flex items-center justify-between p-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-cyan-400 text-left cursor-pointer transition active:scale-95"
+                        >
+                          <div>
+                            <span className="text-xs font-mono font-bold text-cyan-300 block">
+                              {item.addr}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {displayLabel}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

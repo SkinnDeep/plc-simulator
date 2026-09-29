@@ -30,6 +30,7 @@ const EditableLabel = ({ addr, name, onUpdateSymbol }) => {
 };
 
 export function BitMonitorDrawer({
+  activeSandbox,
   isOpen,
   onClose,
   plcData,
@@ -73,11 +74,29 @@ export function BitMonitorDrawer({
   const T4 = plcData?.T4 || [];
   const N7 = plcData?.N7 || [];
 
+  const DEFAULT_PLC1_SYMBOLS = {
+    'I:0/0': 'Switch 1', 'I:0/1': 'Switch 2', 'I:0/2': 'Green PB', 'I:0/3': 'Red PB',
+    'O:0/0': 'Amber Lamp 1', 'O:0/1': 'Blue Lamp 2', 'O:0/2': 'Green Lamp 3', 'O:0/3': 'Red Lamp 4'
+  };
+
+  const DEFAULT_PLC2_SYMBOLS = {
+    'I:0/0': 'START_PB', 'I:0/1': 'STOP_PB', 'I:0/2': 'PROX', 'I:0/3': 'DOWN_LS', 'I:0/4': 'UP_LS',
+    'O:0/0': 'CONV1_MTR', 'O:0/1': 'CONV2_MTR', 'O:0/2': 'SHEAR_CYL_RET', 'O:0/3': 'CONV3_MTR'
+  };
+
+  const getLabel = (addr, defaultName) => {
+    const isPlc1Default = DEFAULT_PLC1_SYMBOLS[addr] === symbols?.[addr];
+    if (symbols?.[addr] && !isPlc1Default) return symbols[addr];
+    if (activeSandbox === 'MetalShear' && DEFAULT_PLC2_SYMBOLS[addr]) return DEFAULT_PLC2_SYMBOLS[addr];
+    if (activeSandbox === 'HardwareTrainer' && DEFAULT_PLC1_SYMBOLS[addr]) return DEFAULT_PLC1_SYMBOLS[addr];
+    return defaultName;
+  };
+
   const inputList = Array.from({ length: 8 }, (_, i) => {
     const addr = `I:0/${i}`;
     return {
       addr,
-      name: symbols?.[addr] || `Input bit ${i}`,
+      name: getLabel(addr, `Input bit ${i}`),
       val: !!bits[addr],
       type: 'input'
     };
@@ -87,7 +106,7 @@ export function BitMonitorDrawer({
     const addr = `O:0/${i}`;
     return {
       addr,
-      name: symbols?.[addr] || `Output bit ${i}`,
+      name: getLabel(addr, `Output bit ${i}`),
       val: !!bits[addr],
       type: 'output'
     };
@@ -97,7 +116,7 @@ export function BitMonitorDrawer({
     const addr = `B3:0/${i}`;
     return {
       addr,
-      name: symbols?.[addr] || `Internal Relay B3:0/${i}`,
+      name: getLabel(addr, `Internal Relay B3:0/${i}`),
       val: !!bits[addr],
       type: 'b3'
     };
@@ -337,7 +356,7 @@ export function BitMonitorDrawer({
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
                         <span className="text-xs font-mono font-bold text-purple-300">{timer.id}</span>
-                        <EditableLabel addr={timer.id} name={symbols?.[timer.id] || 'Timer'} onUpdateSymbol={onUpdateSymbol} />
+                        <EditableLabel addr={timer.id} name={getLabel(timer.id, 'Timer')} onUpdateSymbol={onUpdateSymbol} />
                       </div>
                       <div className="flex items-center gap-1 font-mono text-[10px]">
                         <span className={`px-1.5 py-0.2 rounded font-bold ${timer.EN ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>
@@ -390,7 +409,7 @@ export function BitMonitorDrawer({
                   >
                     <div className="flex flex-col">
                       <span className="text-xs font-mono font-bold text-indigo-400">{addr}</span>
-                      <EditableLabel addr={addr} name={symbols?.[addr] || `Int ${idx}`} onUpdateSymbol={onUpdateSymbol} />
+                      <EditableLabel addr={addr} name={getLabel(addr, `Int ${idx}`)} onUpdateSymbol={onUpdateSymbol} />
                     </div>
                     <input
                       type="number"

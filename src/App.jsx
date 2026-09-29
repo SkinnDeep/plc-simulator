@@ -363,6 +363,7 @@ export function App() {
                 mobileView === 'ladder' ? 'flex' : 'hidden lg:flex'
               }`}>
                 <LadderEditor
+                  activeSandbox={activeSandbox}
                   rungs={currentRungs}
                   onChangeRungs={setCurrentRungs}
                   scanResult={scanResult}
@@ -394,6 +395,7 @@ export function App() {
       <BitMonitorDrawer
         isOpen={isBitMonitorOpen}
         onClose={() => setIsBitMonitorOpen(false)}
+        activeSandbox={activeSandbox}
         plcData={plcData}
         onToggleInput={handleToggleInput}
         onSetRegister={handleSetRegister}
