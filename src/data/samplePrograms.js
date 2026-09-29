@@ -2,6 +2,18 @@
 
 export const SAMPLE_PROGRAMS = [
   {
+    id: 'blank',
+    name: '0. Blank Project',
+    description: 'Start fresh with an empty ladder logic program.',
+    rungs: [
+      {
+        id: 'r0',
+        comment: 'Rung 000: Control logic (drag instructions and I/O to begin)',
+        items: []
+      }
+    ]
+  },
+  {
     id: 'basic-direct',
     name: '1. Basic Direct Wiring (Switch to Lamp)',
     description: 'Each switch directly controls a pilot lamp. Flip switches on the trainer to test!',

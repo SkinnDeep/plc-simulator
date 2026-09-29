@@ -50,10 +50,26 @@ export function App() {
   };
 
   // History stack for Undo/Redo
-  const [history, setHistory] = useState([INITIAL_BLANK_RUNGS]);
+  const [history, setHistory] = useState(() => {
+    try {
+      const savedRungs = localStorage.getItem('plcRungs');
+      if (savedRungs) {
+        const parsed = JSON.parse(savedRungs);
+        if (Array.isArray(parsed) && parsed.length > 0) return [parsed];
+      }
+    } catch {}
+    return [INITIAL_BLANK_RUNGS];
+  });
   const [historyIndex, setHistoryIndex] = useState(0);
   
   const currentRungs = history[historyIndex];
+
+  // Save rungs to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('plcRungs', JSON.stringify(currentRungs));
+    } catch {}
+  }, [currentRungs]);
 
   const setCurrentRungs = (newRungs) => {
     const resolvedRungs = typeof newRungs === 'function' ? newRungs(currentRungs) : newRungs;
