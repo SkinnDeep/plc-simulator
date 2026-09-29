@@ -28,6 +28,9 @@ const COMMON_ADDRESS_OPTIONS = [
     { addr: 'T4:0.DN', label: 'T4:0 Done', desc: 'Timer 0 Done Bit' },
     { addr: 'T4:0.TT', label: 'T4:0 Timing', desc: 'Timer 0 Timing Bit' },
     { addr: 'T4:0.EN', label: 'T4:0 Enable', desc: 'Timer 0 Enable Bit' },
+    { addr: 'T4:1.DN', label: 'T4:1 Done', desc: 'Timer 1 Done Bit' },
+    { addr: 'T4:1.TT', label: 'T4:1 Timing', desc: 'Timer 1 Timing Bit' },
+    { addr: 'T4:1.EN', label: 'T4:1 Enable', desc: 'Timer 1 Enable Bit' },
     { addr: 'N7:1', label: 'N7:1 Step', desc: 'Sequence Step Register' }
   ]}
 ];
@@ -1060,6 +1063,21 @@ export function LadderEditor({
               </button>
             </div>
 
+            <div className="mb-2">
+              <input 
+                type="text" 
+                placeholder="Type custom address (e.g. T4:1.DN) and press Enter"
+                className="w-full bg-slate-950 border border-slate-700 text-cyan-300 text-xs font-mono font-bold px-3 py-2.5 rounded-lg focus:outline-none focus:border-cyan-400"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.target.value.trim()) {
+                    handleUpdateItem(addressPickerTarget.rungIdx, addressPickerTarget.itemId, { operand: e.target.value.trim().toUpperCase() });
+                    setAddressPickerTarget(null);
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
               {COMMON_ADDRESS_OPTIONS.map((grp) => (
                 <div key={grp.group} className="space-y-1.5">
@@ -1081,7 +1099,7 @@ export function LadderEditor({
                             {item.addr}
                           </span>
                           <span className="text-[10px] text-slate-400">
-                            {item.label}
+                            {symbols?.[item.addr] || item.label}
                           </span>
                         </div>
                       </button>
