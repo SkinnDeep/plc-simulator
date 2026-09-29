@@ -270,13 +270,10 @@ export function LadderEditor({
     const rung = rungs[rungIdx];
     if (!rung) return;
 
-    const newId = `bElem_${Date.now()}`;
-    const newItem = { id: newId, type: 'XIC', operand: 'I:0/1', desc: 'Alternate' };
-
     const updateList = (list) => {
       return list.map(it => {
         if (it.id === branchId) {
-          return { ...it, branches: [...it.branches, [newItem]] };
+          return { ...it, branches: [...it.branches, []] };
         }
         if (it.type === 'BRANCH' || it.type === 'SPLIT') {
           return { ...it, branches: it.branches.map(updateList) };
@@ -347,6 +344,38 @@ export function LadderEditor({
   // ========================================================
   // DRAG & DROP HANDLERS
   // ========================================================
+  const handleSwapItems = (rungIdx, id1, id2) => {
+    if (id1 === id2) return;
+    const rung = rungs[rungIdx];
+    if (!rung) return;
+
+    const nextRungs = JSON.parse(JSON.stringify(rungs));
+    const targetRung = nextRungs[rungIdx];
+
+    let ref1 = null, ref2 = null;
+    let list1 = null, list2 = null, idx1 = -1, idx2 = -1;
+
+    const traverse = (list) => {
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].id === id1) { ref1 = list[i]; list1 = list; idx1 = i; }
+        if (list[i].id === id2) { ref2 = list[i]; list2 = list; idx2 = i; }
+        if (list[i].branches) {
+          list[i].branches.forEach(b => traverse(b));
+        }
+      }
+    };
+    traverse(targetRung.items);
+
+    if (ref1 && ref2) {
+      // Swap them safely
+      const temp1 = JSON.parse(JSON.stringify(ref1));
+      const temp2 = JSON.parse(JSON.stringify(ref2));
+      list1[idx1] = temp2;
+      list2[idx2] = temp1;
+      onChangeRungs(nextRungs);
+    }
+  };
+
   const handleDropOnElement = (e, rungIdx, targetItemId) => {
     e.preventDefault();
     e.stopPropagation();
@@ -359,6 +388,8 @@ export function LadderEditor({
 
       if (data.kind === 'io') {
         handleUpdateItem(rungIdx, targetItemId, { operand: data.addr });
+      } else if (data.kind === 'existing-instruction') {
+        handleSwapItems(rungIdx, data.itemId, targetItemId);
       } else if (data.kind === 'instruction') {
         if (data.isBranch || data.type === 'BRANCH' || data.type === 'SPLIT') {
           handleBranchAroundItem(rungIdx, targetItemId);
@@ -386,6 +417,44 @@ export function LadderEditor({
           // ignore drop for branch
         } else {
           handleAddInstructionToRung(rungIdx, data.type);
+        }
+      } else if (data.kind === 'existing-instruction') {
+        const rung = rungs[rungIdx];
+        if (!rung) return;
+
+        const nextRungs = JSON.parse(JSON.stringify(rungs));
+        const targetRung = nextRungs[rungIdx];
+
+        let refItem = null;
+        let oldList = null;
+        let oldIdx = -1;
+
+        const traverse = (list) => {
+          for (let i = 0; i < list.length; i++) {
+            if (list[i].id === data.itemId) { refItem = list[i]; oldList = list; oldIdx = i; }
+            if (list[i].branches) {
+              list[i].branches.forEach(b => traverse(b));
+            }
+          }
+        };
+        traverse(targetRung.items);
+
+        if (refItem && oldList) {
+          const temp = JSON.parse(JSON.stringify(refItem));
+          oldList.splice(oldIdx, 1);
+          if (zoneType === 'output') {
+            targetRung.items.push(temp);
+          } else {
+            // Find insertion point right before outputs
+            const isOutput = (it) => ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(it.type);
+            const firstOutputIdx = targetRung.items.findIndex(it => isOutput(it));
+            if (firstOutputIdx !== -1) {
+              targetRung.items.splice(firstOutputIdx, 0, temp);
+            } else {
+              targetRung.items.push(temp);
+            }
+          }
+          onChangeRungs(nextRungs);
         }
       } else if (data.kind === 'io') {
         if (zoneType === 'output' || data.isOutput) {
@@ -853,6 +922,14 @@ export function LadderEditor({
                                     </button>
                                   </div>
                                 ))}
+
+                                {/* Add Path Button */}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleAddLevelToBranch(rIdx, item.id); }}
+                                  className="mt-1.5 w-full py-1.5 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/80 border border-indigo-500/30 hover:border-indigo-400 text-indigo-300 text-[10px] font-mono font-bold flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer"
+                                >
+                                  <Plus className="w-3 h-3" /> Add OR Path
+                                </button>
                               </div>
 
                               {/* Right Branch Rail (Vertical Tie) */}
@@ -870,13 +947,6 @@ export function LadderEditor({
                                   title="Delete Parallel Branch"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleAddLevelToBranch(rIdx, item.id); }}
-                                  className="text-indigo-400 hover:text-indigo-200 text-[10px] font-mono p-0.5"
-                                  title="Add 3rd parallel path"
-                                >
-                                  +Level
                                 </button>
                               </div>
                             </div>
@@ -1149,14 +1219,25 @@ export function LadderEditor({
 }
 
 // Minimalist ISA-101 Industrial Instruction Card
-function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onDelete, symbols }) {
+function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onDelete, symbols, onDropItem }) {
   const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
   const color = isActive ? 'text-emerald-400' : 'text-slate-300';
   
   return (
     <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'existing-instruction', itemId: item.id }));
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-cyan-400'); }}
+      onDragLeave={(e) => e.currentTarget.classList.remove('ring-2', 'ring-cyan-400')}
+      onDrop={(e) => { 
+        e.currentTarget.classList.remove('ring-2', 'ring-cyan-400');
+        if (onDropItem) onDropItem(e); 
+      }}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      className="flex flex-col items-center justify-center relative select-none group px-2 cursor-pointer"
+      className="flex flex-col items-center justify-center relative select-none group px-2 py-1 cursor-pointer hover:bg-slate-800/40 rounded transition-colors"
     >
       {/* Label above - Explicit Dropdown Button */}
       <button 
@@ -1203,7 +1284,7 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
   );
 }
 
-function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete }) {
+function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete, onDropItem }) {
   const color = isActive ? 'text-emerald-400' : 'text-slate-300';
   const borderColor = isActive ? 'border-emerald-500/60' : 'border-[#3c414a]';
   const bgHeader = isActive ? 'bg-emerald-950/30' : 'bg-[#1a1c20]';
@@ -1220,6 +1301,17 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
   
   return (
     <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'existing-instruction', itemId: item.id }));
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-cyan-400'); }}
+      onDragLeave={(e) => e.currentTarget.classList.remove('ring-2', 'ring-cyan-400')}
+      onDrop={(e) => { 
+        e.currentTarget.classList.remove('ring-2', 'ring-cyan-400');
+        if (onDropItem) onDropItem(e); 
+      }}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
       className={`flex flex-col border-2 ${borderColor} rounded overflow-hidden select-none relative cursor-pointer min-w-[140px] shadow-md mx-2 ${isSelected ? 'ring-2 ring-cyan-500' : ''}`}
     >
@@ -1305,7 +1397,7 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
   );
 }
 
-function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete }) {
+function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete, onDropItem }) {
   const color = isActive ? 'text-emerald-400' : 'text-slate-300';
   const borderColor = isActive ? 'border-emerald-500/60' : 'border-[#3c414a]';
   const bgHeader = isActive ? 'bg-emerald-950/30' : 'bg-[#1a1c20]';
@@ -1345,6 +1437,17 @@ function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, o
 
   return (
     <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'existing-instruction', itemId: item.id }));
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-cyan-400'); }}
+      onDragLeave={(e) => e.currentTarget.classList.remove('ring-2', 'ring-cyan-400')}
+      onDrop={(e) => { 
+        e.currentTarget.classList.remove('ring-2', 'ring-cyan-400');
+        if (onDropItem) onDropItem(e); 
+      }}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
       className={`flex flex-col border-2 ${borderColor} rounded overflow-hidden select-none relative cursor-pointer min-w-[130px] shadow-md mx-2 ${isSelected ? 'ring-2 ring-cyan-500' : ''}`}
     >
