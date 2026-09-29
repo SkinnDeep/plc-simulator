@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { PLCEngine } from './engine/plcEngine';
 import { createInitialDataModel } from './types/plcTypes';
 import { SAMPLE_PROGRAMS } from './data/samplePrograms';

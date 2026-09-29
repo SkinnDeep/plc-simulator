@@ -10,6 +10,11 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
 
   const containerRef = useRef(null);
 
+  const onToggleInputRef = useRef(onToggleInput);
+  useEffect(() => {
+    onToggleInputRef.current = onToggleInput;
+  }, [onToggleInput]);
+
   // Simulation state
   const stateRef = useRef({
     stripX: 0,
@@ -90,15 +95,15 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
       // Check differences and send to engine
       if (proxOn !== sensors.PROX) {
         sensors.PROX = proxOn;
-        onToggleInput('I:0/2', proxOn);
+        onToggleInputRef.current('I:0/2', proxOn);
       }
       if (downOn !== sensors.DOWN_LS) {
         sensors.DOWN_LS = downOn;
-        onToggleInput('I:0/3', downOn);
+        onToggleInputRef.current('I:0/3', downOn);
       }
       if (upOn !== sensors.UP_LS) {
         sensors.UP_LS = upOn;
-        onToggleInput('I:0/4', upOn);
+        onToggleInputRef.current('I:0/4', upOn);
       }
 
       state.stripX = stripX;
@@ -111,16 +116,16 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
 
     animFrame = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animFrame);
-  }, [isRunning, conv1On, conv2On, bladeDown, onToggleInput]);
+  }, [isRunning, conv1On, conv2On, bladeDown]);
 
   const [activePress, setActivePress] = useState(null);
 
   useEffect(() => {
     const handleGlobalRelease = () => {
       if (activePress === 'START') {
-        onToggleInput('I:0/0', false);
+        onToggleInputRef.current('I:0/0', false);
       } else if (activePress === 'STOP') {
-        onToggleInput('I:0/1', true); // Stop is N.C. so release means ON
+        onToggleInputRef.current('I:0/1', true); // Stop is N.C. so release means ON
       }
       setActivePress(null);
     };
@@ -130,12 +135,16 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
       window.removeEventListener('mouseup', handleGlobalRelease);
       window.removeEventListener('touchend', handleGlobalRelease);
     };
-  }, [activePress, onToggleInput]);
+  }, [activePress]);
 
   // Init N.C. Stop Button to TRUE on mount
+  const isInitialized = useRef(false);
   useEffect(() => {
-    onToggleInput('I:0/1', true);
-  }, [onToggleInput]);
+    if (!isInitialized.current) {
+      onToggleInputRef.current('I:0/1', true);
+      isInitialized.current = true;
+    }
+  }, []);
 
   return (
     <div className="bg-[#212328] border-2 border-[#3c414a] rounded-2xl p-4 shadow-[0_0_25px_rgba(0,0,0,0.5)] flex flex-col gap-4 select-none relative overflow-hidden h-[450px]">
