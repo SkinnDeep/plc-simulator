@@ -6,13 +6,14 @@ export function SpotlightTour({
   onComplete,
   rungs,
   isRunning,
-  plcData
+  plcData,
+  tourSteps = null
 }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRects, setTargetRects] = useState([]);
 
   // Define the tour steps and their completion conditions
-  const steps = React.useMemo(() => [
+  const defaultSteps = React.useMemo(() => [
     {
       id: 'tour-stop-mode',
       targetId: 'tour-controls', // Points to the header controls
@@ -69,6 +70,8 @@ export function SpotlightTour({
       position: 'right'
     }
   ], [isRunning, rungs, plcData]);
+
+  const steps = tourSteps || defaultSteps;
 
   const step = steps[currentStep];
 
@@ -230,3 +233,4 @@ export function SpotlightTour({
     </div>
   );
 }
+

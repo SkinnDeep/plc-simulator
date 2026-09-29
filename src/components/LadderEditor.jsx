@@ -920,9 +920,9 @@ export function LadderEditor({
                             >
                               {/* Left Branch Rail (Vertical Tie) */}
                               <div className="flex flex-col items-center justify-between mr-2 py-1">
-                                <span className="text-[10px] text-indigo-400 font-bold">┌</span>
+                                <span className="text-[10px] text-indigo-400 font-bold">&bull;</span>
                                 <div className={`w-1 flex-1 rounded-full ${branchActive ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
-                                <span className="text-[10px] text-indigo-400 font-bold">└</span>
+                                <span className="text-[10px] text-indigo-400 font-bold">&bull;</span>
                               </div>
 
                               {/* Branch Levels */}
@@ -989,9 +989,9 @@ export function LadderEditor({
 
                               {/* Right Branch Rail (Vertical Tie) */}
                               <div className="flex flex-col items-center justify-between ml-2 py-1">
-                                <span className="text-[10px] text-indigo-400 font-bold">┐</span>
+                                <span className="text-[10px] text-indigo-400 font-bold">&bull;</span>
                                 <div className={`w-1 flex-1 rounded-full ${branchActive ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
-                                <span className="text-[10px] text-indigo-400 font-bold">┘</span>
+                                <span className="text-[10px] text-indigo-400 font-bold">&bull;</span>
                               </div>
 
                               {/* Branch Controls */}
@@ -1108,9 +1108,9 @@ export function LadderEditor({
                               >
                                 {/* Left Branch Rail (Vertical Tie) */}
                                 <div className="flex flex-col items-center justify-between mr-2 py-1">
-                                  <span className="text-[10px] text-amber-400 font-bold">?</span>
+                                  <span className="text-[10px] text-amber-400 font-bold">&bull;</span>
                                   <div className={`w-1 flex-1 rounded-full ${branchActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                                  <span className="text-[10px] text-amber-400 font-bold">?</span>
+                                  <span className="text-[10px] text-amber-400 font-bold">&bull;</span>
                                 </div>
   
                                 {/* Branch Levels */}
@@ -1191,9 +1191,9 @@ export function LadderEditor({
   
                                 {/* Right Branch Rail (Vertical Tie) */}
                                 <div className="flex flex-col items-center justify-between ml-2 py-1">
-                                  <span className="text-[10px] text-amber-400 font-bold">?</span>
+                                  <span className="text-[10px] text-amber-400 font-bold">&bull;</span>
                                   <div className={`w-1 flex-1 rounded-full ${branchActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                                  <span className="text-[10px] text-amber-400 font-bold">?</span>
+                                  <span className="text-[10px] text-amber-400 font-bold">&bull;</span>
                                 </div>
   
                                 {/* Branch Controls */}

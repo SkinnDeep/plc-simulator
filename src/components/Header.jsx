@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Square, RotateCcw, Cpu, GraduationCap, HelpCircle, CheckCircle2, AlertTriangle, Database, Undo2, Redo2 } from 'lucide-react';
+import { Activity, Play, Square, RotateCcw, Cpu, GraduationCap, HelpCircle, CheckCircle2, AlertTriangle, Database, Undo2, Redo2 } from 'lucide-react';
 import { SAMPLE_PROGRAMS } from '../data/samplePrograms';
 
 export function Header({
@@ -23,25 +23,25 @@ export function Header({
   onToggleTheme
 }) {
   return (
-    <header className={`app-header bg-[#1e1e1e] border-b-2 text-slate-100 px-3 sm:px-4 py-2 flex flex-nowrap overflow-x-auto items-center justify-between gap-4 shadow-xl select-none ${isRunning ? 'border-t-4 border-t-emerald-500 border-b-[#2d2d2d]' : 'border-t-4 border-t-slate-700 border-b-[#2d2d2d]'}`}>
-      {/* Brand & Processor Status */}
-      <div className="flex items-center gap-2.5">
-        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-red-600 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-md shrink-0">
-          BYU
-        </div>
-        <div>
-          <div className="flex items-center gap-1.5">
-            <h1 className="font-extrabold text-xs sm:text-sm tracking-tight text-white">PLC Simulator</h1>
-            <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono border border-emerald-500/20 font-bold">
-              MFGEN 333
-            </span>
+    <header className={`app-header bg-[#1e1e1e] border-b-2 text-slate-100 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-xl select-none ${isRunning ? 'border-t-4 border-t-emerald-500 border-b-[#2d2d2d]' : 'border-t-4 border-t-slate-700 border-b-[#2d2d2d]'}`}>
+              {/* Brand & Processor Status */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-slate-700 to-slate-900 border border-slate-600 flex items-center justify-center text-cyan-400 shadow-md shrink-0">
+            <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono hidden xs:block">Created by SkinnDeep</p>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <h1 className="font-extrabold text-xs sm:text-sm tracking-tight text-white">RSLogix Web Sim</h1>
+              <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono border border-emerald-500/20 font-bold">
+                PRO
+              </span>
+            </div>
+            <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono hidden xs:block">Industrial Logic Engine</p>
+          </div>
         </div>
-      </div>
 
       {/* Primary Actions: RUN/STOP, RESET, PRESETS, BIT MONITOR */}
-      <div id="tour-controls" role="group" aria-label="Program controls" className="flex items-center gap-1.5 sm:gap-2 flex-nowrap shrink-0">
+      <div id="tour-controls" role="group" aria-label="Program controls" className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
         {/* RUN / STOP Button */}
         <button
           id="tour-run"
@@ -135,22 +135,32 @@ export function Header({
         </select>
 
         <div 
-          className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold cursor-help ${
+          className={`group relative hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold cursor-help ${
             logicIssues?.length > 0
               ? 'bg-amber-950/60 border-amber-600 text-amber-300'
               : 'bg-emerald-950/40 border-emerald-600 text-emerald-300'
           }`}
-          title={logicIssues?.length > 0 ? `Logic Warnings:\n${logicIssues.map(i => '- ' + i.message).join('\n')}` : "No issues found"}
         >
           {logicIssues?.length > 0 ? (
             <>
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
               <span>Logic Warning ({logicIssues?.length || 0})</span>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-slate-300 font-sans whitespace-normal text-left font-normal pointer-events-none">
+                <strong className="text-amber-400 block mb-2 font-semibold">Logic Warnings:</strong>
+                <ul className="list-disc pl-4 space-y-1.5 text-[11px] text-slate-300">
+                  {logicIssues.map((issue, idx) => (
+                    <li key={idx} className="leading-snug">{issue.message}</li>
+                  ))}
+                </ul>
+              </div>
             </>
           ) : (
             <>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
               <span>No issues found</span>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-slate-300 font-sans whitespace-nowrap font-normal pointer-events-none">
+                Status: All logic checks passed.
+              </div>
             </>
           )}
         </div>
@@ -215,3 +225,8 @@ export function Header({
     </header>
   );
 }
+
+
+
+
+

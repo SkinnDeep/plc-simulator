@@ -55,7 +55,7 @@ export const SAMPLE_PROGRAMS = [
         items: [
           {
             id: 'r0_split',
-            type: 'SPLIT',
+            type: 'BRANCH',
             branches: [
               [{ id: 'b_start', type: 'XIC', operand: 'I:0/2', desc: 'Start PB' }],
               [{ id: 'b_seal', type: 'XIC', operand: 'O:0/0', desc: 'Motor Aux Seal-In' }]
@@ -78,7 +78,7 @@ export const SAMPLE_PROGRAMS = [
         items: [
           {
             id: 'r0_split',
-            type: 'SPLIT',
+            type: 'BRANCH',
             branches: [
               [{ id: 'b1', type: 'XIC', operand: 'I:0/0', desc: 'Switch 1' }],
               [{ id: 'b2', type: 'XIC', operand: 'I:0/1', desc: 'Switch 2' }]
@@ -130,6 +130,7 @@ export const SAMPLE_PROGRAMS = [
   },
   {
     id: 'micrologix-chaser',
+        id: 'sequencer',
     name: '6. MicroLogix Sequencer (Slides 34-47 Project)',
     description: 'The 11-step sequential light project from class using EQU, MOV, and timers to cycle lights.',
     rungs: [
@@ -143,24 +144,37 @@ export const SAMPLE_PROGRAMS = [
       },
       {
         id: 'r1',
-        comment: 'Rung 1: If N7:1 == 1, turn ON Amber Lamp (O:0/0), start T4:1 (1s), and advance to Step 2.',
+        comment: 'Rung 1: If N7:1 == 1, turn ON Amber Lamp (O:0/0) and start T4:1 (1s).',
         items: [
           { id: 'r1_i0', type: 'EQU', operand: 'N7:1', params: { sourceA: 'N7:1', sourceB: 1 } },
           { id: 'r1_o0', type: 'OTL', operand: 'O:0/0', desc: 'Amber Lamp' },
-          { id: 'r1_o1', type: 'TON', operand: 'T4:1', params: { pre: 1.0 } },
-          { id: 'r1_o2', type: 'MOV', operand: '2', params: { source: '2', dest: 'N7:1' } }
+          { id: 'r1_o1', type: 'TON', operand: 'T4:1', params: { pre: 1.0 } }
+        ]
+      },
+      {
+        id: 'r1b',
+        comment: 'Rung 1b: When T4:1 is Done, advance to Step 2.',
+        items: [
+          { id: 'r1b_i0', type: 'XIC', operand: 'T4:1.DN', desc: 'T4:1 Done' },
+          { id: 'r1b_o0', type: 'MOV', operand: '2', params: { source: '2', dest: 'N7:1' } }
         ]
       },
       {
         id: 'r2',
-        comment: 'Rung 2: If N7:1 == 2 and T4:1 Done, turn ON Blue Lamp (O:0/1), turn OFF Amber, start T4:2, advance to Step 3.',
+        comment: 'Rung 2: If N7:1 == 2, turn ON Blue Lamp (O:0/1), turn OFF Amber, start T4:2 (1s).',
         items: [
           { id: 'r2_i0', type: 'EQU', operand: 'N7:1', params: { sourceA: 'N7:1', sourceB: 2 } },
-          { id: 'r2_i1', type: 'XIC', operand: 'T4:1.DN', desc: 'T4:1 Done' },
           { id: 'r2_o0', type: 'OTL', operand: 'O:0/1', desc: 'Blue Lamp' },
           { id: 'r2_o1', type: 'OTU', operand: 'O:0/0', desc: 'Amber Lamp' },
-          { id: 'r2_o2', type: 'TON', operand: 'T4:2', params: { pre: 1.0 } },
-          { id: 'r2_o3', type: 'MOV', operand: '3', params: { source: '3', dest: 'N7:1' } }
+          { id: 'r2_o2', type: 'TON', operand: 'T4:2', params: { pre: 1.0 } }
+        ]
+      },
+      {
+        id: 'r2b',
+        comment: 'Rung 2b: When T4:2 is Done, advance to Step 3.',
+        items: [
+          { id: 'r2b_i0', type: 'XIC', operand: 'T4:2.DN', desc: 'T4:2 Done' },
+          { id: 'r2b_o0', type: 'MOV', operand: '3', params: { source: '3', dest: 'N7:1' } }
         ]
       },
       {
@@ -176,3 +190,5 @@ export const SAMPLE_PROGRAMS = [
     ]
   }
 ];
+
+

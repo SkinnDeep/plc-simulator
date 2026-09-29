@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LadderEditor } from './LadderEditor';
 import {
   BookOpen,
   Play,
@@ -8,13 +9,15 @@ import {
   Clock,
   Award,
   Layers,
-  GitFork
+  GitFork, CheckCircle2, HelpCircle
 } from 'lucide-react';
 
 export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
   const [activeModule, setActiveModule] = useState('lessons'); // 'lessons' | 'challenges'
   const [selectedLessonId, setSelectedLessonId] = useState('contacts-coils');
   const [selectedChallengeIdx, setSelectedChallengeIdx] = useState(0);
+  const [showSolution, setShowSolution] = useState(false);
+  React.useEffect(() => setShowSolution(false), [selectedChallengeIdx]);
 
   // Sequencer step state for Lesson 5
   const [seqStep, setSeqStep] = useState(1);
@@ -75,7 +78,7 @@ export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
       id: 'parallel-branching',
       title: '2. Parallel Branching & Motor Seal-In',
       subtitle: 'Slides 31-33: 3-Wire Motor Control (Example 9.4)',
-      icon: GitFork,
+      icon: GitFork, CheckCircle2, HelpCircle,
       content: (
         <div className="space-y-4 text-sm">
           <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
@@ -391,13 +394,40 @@ export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
                 <h3 className="text-base font-bold text-white mb-2">{currentChallenge.title}</h3>
                 <p className="text-sm text-slate-300 mb-4">{currentChallenge.prompt}</p>
 
-                <button
-                  onClick={() => onApplyChallengeSolution(currentChallenge.solutionRungs)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  Load Challenge Logic into Simulator
-                </button>
+                                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => onApplyChallengeSolution([])}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-md transition"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    Start Sandbox (Blank)
+                  </button>
+                  <button
+                    onClick={() => onApplyChallengeSolution(currentChallenge.solutionRungs)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 fill-current" />
+                    Load Solution to Sandbox
+                  </button>
+                  <button
+                    onClick={() => setShowSolution(v => !v)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs shadow-md transition"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    {showSolution ? 'Hide Guide' : 'Reveal Solution Guide'}
+                  </button>
+                </div>
+                {showSolution && (
+                  <div className="mt-6 border-2 border-amber-500/50 rounded-xl overflow-hidden pointer-events-none opacity-90 relative">
+                    <div className="bg-amber-950/40 px-3 py-2 text-xs font-bold text-amber-300 uppercase tracking-wider border-b border-amber-500/30 flex items-center justify-between">
+                      <span>Visual Solution Guide</span>
+                      <span className="text-[9px] opacity-70">Read-Only</span>
+                    </div>
+                    <div className="bg-[#1e1e1e] p-2">
+                       <LadderEditor rungs={currentChallenge.solutionRungs} onChangeRungs={()=>{}} plcData={{bits:{}, T4:{}, N7:{}}} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -406,3 +436,5 @@ export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
     </div>
   );
 }
+
+
