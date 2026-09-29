@@ -41,7 +41,9 @@ export function LadderEditor({
   onRedo,
   isRunning,
   onStop,
-  logicIssues
+  logicIssues,
+  symbols,
+  onUpdateSymbol
 }) {
   const [selectedRungIdx, setSelectedRungIdx] = useState(0);
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -823,6 +825,8 @@ export function LadderEditor({
                                           />
                                         ) : (
                                           <RungElementCard
+                                symbols={symbols}
+                                            symbols={symbols}
                                             item={subItem}
                                             isSelected={selectedItemId === subItem.id}
                                             isActive={isElementActive(rung.id, subItem.id)}
@@ -902,6 +906,7 @@ export function LadderEditor({
                               />
                             ) : (
                               <RungElementCard
+                                symbols={symbols}
                                 item={item}
                                 isSelected={selectedItemId === item.id}
                                 isActive={isElementActive(rung.id, item.id)}
@@ -979,6 +984,7 @@ export function LadderEditor({
                       } else {
                         return (
                           <RungElementCard
+                            symbols={symbols}
                             key={item.id}
                             item={item}
                             isSelected={selectedItemId === item.id}
@@ -1125,7 +1131,7 @@ export function LadderEditor({
 }
 
 // Minimalist ISA-101 Industrial Instruction Card
-function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onDelete }) {
+function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onDelete, symbols }) {
   const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
   const color = isActive ? 'text-emerald-400' : 'text-slate-300';
   
@@ -1137,15 +1143,22 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
       {/* Label above - Explicit Dropdown Button */}
       <button 
         onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
-        className={`flex items-center gap-0.5 text-[10px] font-mono mb-1 px-1.5 py-0.5 rounded border transition-colors ${
+        className={`flex flex-col items-center gap-0.5 text-[10px] font-mono mb-1 px-1.5 py-0.5 rounded border transition-colors ${
           isActive 
             ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300 hover:bg-emerald-800/60' 
             : 'bg-[#2a2d34] border-slate-600/50 text-slate-300 hover:bg-[#343842] hover:border-cyan-500/50 hover:text-cyan-300'
         }`}
         title="Click to assign I/O address"
       >
-        <span>{item.operand || 'Assign'}</span>
-        <ChevronDown className="w-3 h-3 opacity-70" />
+        <div className="flex items-center gap-0.5">
+          <span>{item.operand || 'Assign'}</span>
+          <ChevronDown className="w-3 h-3 opacity-70" />
+        </div>
+        {symbols?.[item.operand] && (
+          <span className="text-[8.5px] text-slate-400/80 font-bold px-1 whitespace-nowrap overflow-hidden max-w-[80px] text-ellipsis leading-tight">
+            {symbols[item.operand]}
+          </span>
+        )}
       </button>
 
       {/* Symbol */}

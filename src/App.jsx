@@ -22,7 +22,33 @@ const INITIAL_BLANK_RUNGS = [
 export function App() {
   const [plcData, setPlcData] = useState(() => createInitialDataModel());
   const [isRunning, setIsRunning] = useState(false);
+  const [symbols, setSymbols] = useState(() => {
+    try {
+      const saved = localStorage.getItem('plcSymbols');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      'I:0/0': 'Switch 1',
+      'I:0/1': 'Switch 2',
+      'I:0/2': 'Green PB',
+      'I:0/3': 'Red PB',
+      'O:0/0': 'Amber Lamp 1',
+      'O:0/1': 'Blue Lamp 2',
+      'O:0/2': 'Green Lamp 3',
+      'O:0/3': 'Red Lamp 4',
+      'T4:0': 'Timer 0',
+      'N7:0': 'Int 0'
+    };
+  });
   
+  const handleUpdateSymbol = (addr, label) => {
+    setSymbols(prev => {
+      const next = { ...prev, [addr]: label };
+      try { localStorage.setItem('plcSymbols', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
   // History stack for Undo/Redo
   const [history, setHistory] = useState([INITIAL_BLANK_RUNGS]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -289,6 +315,7 @@ export function App() {
                   onToggleInput={handleToggleInput}
                   isRunning={isRunning}
                   theme={theme}
+                  symbols={symbols}
                 />
               </div>
 
@@ -306,6 +333,8 @@ export function App() {
                   isRunning={isRunning}
                   onStop={handleToggleRun}
                   logicIssues={logicIssues}
+                  symbols={symbols}
+                  onUpdateSymbol={handleUpdateSymbol}
                 />
               </div>
             </div>
@@ -329,6 +358,8 @@ export function App() {
         plcData={plcData}
         onToggleInput={handleToggleInput}
         onSetRegister={handleSetRegister}
+        symbols={symbols}
+        onUpdateSymbol={handleUpdateSymbol}
       />
 
       {/* Logic Warnings Console Banner (Bottom) */}
