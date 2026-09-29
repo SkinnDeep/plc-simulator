@@ -127,7 +127,14 @@ export function LadderEditor({
     setSelectedItemId(null);
   };
 
-  const isOutputInstruction = (type) => ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(type);
+  const isOutputInstruction = (item) => {
+    if (!item) return false;
+    const type = typeof item === 'string' ? item : item.type;
+    if (type === 'BRANCH') {
+      return item.isOutputBranch === true;
+    }
+    return ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(type);
+  };
 
   // Add instruction (from palette click or drop)
   const handleAddInstructionToRung = (rungIdx, type, defaultAddr = null) => {
@@ -171,7 +178,7 @@ export function LadderEditor({
       nextItems.push(newItem);
     } else {
       // Insert contact before outputs if any exist
-      const firstOutIdx = nextItems.findIndex(it => isOutputInstruction(it.type));
+      const firstOutIdx = nextItems.findIndex(it => isOutputInstruction(it));
       if (firstOutIdx >= 0) {
         nextItems.splice(firstOutIdx, 0, newItem);
       } else {
@@ -185,52 +192,68 @@ export function LadderEditor({
     setSelectedItemId(newItem.id);
   };
 
-  const handleNodeClick = (rungIdx, itemIdx) => {
+    const handleNodeClick = (rungIdx, itemIdx, isOutputZone = false) => {
     if (!isBranchMode) return;
     if (!branchStartNode) {
-      setBranchStartNode({ rungIdx, itemIdx });
+      setBranchStartNode({ rungIdx, itemIdx, isOutputZone });
     } else {
-      if (branchStartNode.rungIdx === rungIdx) {
-        handleCreateBranchSpan(rungIdx, branchStartNode.itemIdx, itemIdx);
+      if (branchStartNode.rungIdx === rungIdx && branchStartNode.isOutputZone === isOutputZone) {
+        handleCreateBranchSpan(rungIdx, branchStartNode.itemIdx, itemIdx, isOutputZone);
       }
       setBranchStartNode(null);
       setIsBranchMode(false);
     }
   };
 
-  const handleCreateBranchSpan = (rungIdx, idxA, idxB) => {
+    const handleCreateBranchSpan = (rungIdx, idxA, idxB, isOutputZone = false) => {
     const startIdx = Math.min(idxA, idxB);
     const endIdx = Math.max(idxA, idxB);
     const rung = rungs[rungIdx];
     if (!rung || startIdx >= endIdx) return;
     
     const nextItems = [...rung.items];
-    const inputs = nextItems.filter(it => !isOutputInstruction(it.type));
-    const outputs = nextItems.filter(it => isOutputInstruction(it.type));
+    const inputs = nextItems.filter(it => !isOutputInstruction(it));
+    const outputs = nextItems.filter(it => isOutputInstruction(it));
     
-    const branchItems = inputs.slice(startIdx, endIdx);
+    const zoneItems = isOutputZone ? outputs : inputs;
+    const branchItems = zoneItems.slice(startIdx, endIdx);
+    
     const newBranch = {
       id: `branch_${Date.now()}`,
       type: 'BRANCH',
+      isOutputBranch: isOutputZone,
       branches: [
         branchItems,
         [] // Empty bottom branch ready for elements
       ]
     };
     
-    const newInputs = [
-      ...inputs.slice(0, startIdx),
-      newBranch,
-      ...inputs.slice(endIdx)
-    ];
+    let finalItems;
+    if (isOutputZone) {
+      const newOutputs = [
+        ...outputs.slice(0, startIdx),
+        newBranch,
+        ...outputs.slice(endIdx)
+      ];
+      finalItems = [...inputs, ...newOutputs];
+    } else {
+      const newInputs = [
+        ...inputs.slice(0, startIdx),
+        newBranch,
+        ...inputs.slice(endIdx)
+      ];
+      finalItems = [...newInputs, ...outputs];
+    }
     
     const nextRungs = [...rungs];
-    nextRungs[rungIdx] = { ...rung, items: [...newInputs, ...outputs] };
+    nextRungs[rungIdx] = { ...rung, items: finalItems };
     onChangeRungs(nextRungs);
+    setIsBranchMode(false);
+    setBranchStartNode(null);
   };
 
   // Wrap a specific contact into a parallel branch
-  const handleBranchAroundItem = (rungIdx, targetItemId) => {
+    const handleBranchAroundItem = (rungIdx, targetItemId) => {
     const rung = rungs[rungIdx];
     if (!rung) return;
 
@@ -239,27 +262,28 @@ export function LadderEditor({
       for (const it of list) {
         if (it.id === targetItemId) {
           const branchId = `branch_${Date.now()}`;
-          const newParallelContact = {
-            id: `b_sub_${Date.now()}`,
-            type: 'XIC',
-            operand: 'O:0/0',
-            desc: 'Seal-In'
-          };
+          const isOutput = isOutputInstruction(it);
+          const newParallelContact = isOutput
+            ? { id: `b_sub_${Date.now()}`, type: 'OTE', operand: 'O:0/0', desc: 'Output' }
+            : { id: `b_sub_${Date.now()}`, type: 'XIC', operand: 'O:0/0', desc: 'Seal-In' };
           out.push({
             id: branchId,
             type: 'BRANCH',
+            isOutputBranch: isOutput,
             branches: [
               [it],
               [newParallelContact]
             ]
           });
-        } else if (it.type === 'BRANCH' || it.type === 'SPLIT') {
-          out.push({
-            ...it,
-            branches: it.branches.map(wrapList)
-          });
         } else {
-          out.push(it);
+          if (it.type === 'BRANCH' || it.type === 'SPLIT') {
+            out.push({
+              ...it,
+              branches: it.branches.map(wrapList)
+            });
+          } else {
+            out.push(it);
+          }
         }
       }
       return out;
@@ -269,12 +293,14 @@ export function LadderEditor({
     nextRungs[rungIdx] = { ...rung, items: wrapList(rung.items) };
     onChangeRungs(nextRungs);
   };
-  const handleAddContactToBranchPath = (rungIdx, branchId, pathIdx, addr = 'I:0/0') => {
+    const handleAddContactToBranchPath = (rungIdx, branchId, pathIdx, isOutputZone = false) => {
     const rung = rungs[rungIdx];
     if (!rung) return;
 
     const newId = `bElem_${Date.now()}`;
-    const newItem = { id: newId, type: 'XIC', operand: addr, desc: 'Contact' };
+    const newItem = isOutputZone 
+      ? { id: newId, type: 'OTE', operand: 'O:0/0', desc: 'Output' }
+      : { id: newId, type: 'XIC', operand: 'I:0/0', desc: 'Contact' };
 
     const updateList = (list) => {
       return list.map(it => {
@@ -472,12 +498,11 @@ export function LadderEditor({
         if (refItem && oldList) {
           const temp = JSON.parse(JSON.stringify(refItem));
           oldList.splice(oldIdx, 1);
-          if (zoneType === 'output') {
-            targetRung.items.push(temp);
-          } else {
-            // Find insertion point right before outputs
-            const isOutput = (it) => ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(it.type);
-            const firstOutputIdx = targetRung.items.findIndex(it => isOutput(it));
+                      if (zoneType === 'output') {
+              if (temp.type === 'BRANCH') temp.isOutputBranch = true;
+              targetRung.items.push(temp);
+            } else {
+            // Find insertion point right before outputs              const firstOutputIdx = targetRung.items.findIndex(it => isOutputInstruction(it));
             if (firstOutputIdx !== -1) {
               targetRung.items.splice(firstOutputIdx, 0, temp);
             } else {
@@ -599,11 +624,11 @@ export function LadderEditor({
           if (!currRung) return;
           const cloned = cloneItemWithNewIds(clipboard.data);
           const nextItems = [...(currRung.items || [])];
-          const isOut = isOutputInstruction(cloned.type);
+          const isOut = isOutputInstruction(cloned);
           if (isOut) {
             nextItems.push(cloned);
           } else {
-            const firstOut = nextItems.findIndex(it => isOutputInstruction(it.type));
+            const firstOut = nextItems.findIndex(it => isOutputInstruction(it));
             if (firstOut >= 0) nextItems.splice(firstOut, 0, cloned);
             else nextItems.push(cloned);
           }
@@ -787,8 +812,8 @@ export function LadderEditor({
         {rungs.map((rung, rIdx) => {
           const isRungSelected = selectedRungIdx === rIdx;
           const conducting = isRungActive(rung.id);
-          const inputItems = rung.items.filter(it => !isOutputInstruction(it.type));
-          const outputItems = rung.items.filter(it => isOutputInstruction(it.type));
+          const inputItems = rung.items.filter(it => !isOutputInstruction(it));
+          const outputItems = rung.items.filter(it => isOutputInstruction(it));
 
           return (
             <div
@@ -1051,58 +1076,208 @@ export function LadderEditor({
                     </div>
                   </div>
 
-                  {/* Right Side: Outputs */}
-                  <div className="flex items-center gap-3 relative z-10 ml-auto py-2">
-                    {outputItems.map(item => {
-                      if (item.type === 'TON') {
-                        return (
-                          <TimerInstructionBlock
-                            key={item.id}
-                            item={item}
-                            isSelected={selectedItemId === item.id}
-                            isActive={isElementActive(rung.id, item.id)}
-                            plcData={plcData}
-                            onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
-                            onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
-                            onDelete={() => handleDeleteItem(rIdx, item.id)}
-                            onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
-                          />
-                        );
-                      } else if (['ADD', 'SUB', 'MUL', 'DIV', 'MOV', 'EQU'].includes(item.type)) {
-                        return (
-                          <MathInstructionBlock
-                            key={item.id}
-                            item={item}
-                            isSelected={selectedItemId === item.id}
-                            isActive={isElementActive(rung.id, item.id)}
-                            plcData={plcData}
-                            onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
-                            onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
-                            onDelete={() => handleDeleteItem(rIdx, item.id)}
-                            onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
-                          />
-                        );
-                      } else {
-                        return (
-                          <RungElementCard
-                            symbols={symbols}
-                            key={item.id}
-                            item={item}
-                            isSelected={selectedItemId === item.id}
-                            isActive={isElementActive(rung.id, item.id)}
-                            onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
-                            onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
-                            onDelete={() => handleDeleteItem(rIdx, item.id)}
-                            onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
-                          />
-                        );
-                      }
-                    })}
+                                      {/* Right Side: Outputs */}
+                    <div className="flex items-center gap-1 relative z-10 ml-auto py-2">
+                      {outputItems.map((item, idx) => {
+                        if (item.type === 'BRANCH' || item.type === 'SPLIT') {
+                          const branchActive = isElementActive(rung.id, item.id);
+                          return (
+                            <React.Fragment key={item.id}>
+                              <WireJunctionHandle 
+                                rungIdx={rIdx} 
+                                itemIdx={idx} 
+                                onDropJunction={handleCreateBranchSpan} 
+                                isBranchMode={isBranchMode}
+                                branchStartNode={branchStartNode}
+                                onNodeClick={handleNodeClick}
+                                isOutputZone={true}
+                              />
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedRungIdx(rIdx);
+                                  setSelectedItemId(item.id);
+                                }}
+                                className={`flex items-stretch border-2 rounded-xl p-2.5 transition-all shadow-md relative mx-2 ${
+                                  selectedItemId === item.id
+                                    ? 'ring-2 ring-amber-400 border-amber-400 bg-amber-950/40'
+                                    : branchActive
+                                      ? 'border-emerald-500/80 bg-emerald-950/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                                      : 'border-amber-500/60 bg-amber-950/30'
+                                }`}
+                              >
+                                {/* Left Branch Rail (Vertical Tie) */}
+                                <div className="flex flex-col items-center justify-between mr-2 py-1">
+                                  <span className="text-[10px] text-amber-400 font-bold">?</span>
+                                  <div className={`w-1 flex-1 rounded-full ${branchActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                                  <span className="text-[10px] text-amber-400 font-bold">?</span>
+                                </div>
+  
+                                {/* Branch Levels */}
+                                <div className="flex flex-col gap-2.5">
+                                  {item.branches.map((path, pathIdx) => (
+                                    <div
+                                      key={pathIdx}
+                                      className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-900/90 border border-slate-700/60"
+                                    >
+                                      <span className="text-[9px] font-mono font-bold text-amber-300 px-1 py-0.5 rounded bg-amber-950">
+                                        PATH {String.fromCharCode(65 + pathIdx)}
+                                      </span>
+  
+                                      {path.map(subItem => (
+                                        <React.Fragment key={subItem.id}>
+                                          {subItem.type === 'TON' ? (
+                                            <TimerInstructionBlock
+                                              item={subItem}
+                                              isSelected={selectedItemId === subItem.id}
+                                              isActive={isElementActive(rung.id, subItem.id)}
+                                              plcData={plcData}
+                                              onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
+                                              onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                              onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
+                                              onDelete={() => handleDeleteItem(rIdx, subItem.id)}
+                                              onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
+                                            />
+                                          ) : ['ADD', 'SUB', 'MUL', 'DIV', 'MOV', 'EQU'].includes(subItem.type) ? (
+                                            <MathInstructionBlock
+                                              item={subItem}
+                                              isSelected={selectedItemId === subItem.id}
+                                              isActive={isElementActive(rung.id, subItem.id)}
+                                              plcData={plcData}
+                                              onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
+                                              onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                              onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
+                                              onDelete={() => handleDeleteItem(rIdx, subItem.id)}
+                                              onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
+                                            />
+                                          ) : (
+                                            <RungElementCard
+                                              symbols={symbols}
+                                              item={subItem}
+                                              isSelected={selectedItemId === subItem.id}
+                                              isActive={isElementActive(rung.id, subItem.id)}
+                                              onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
+                                              onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                              onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
+                                              onDelete={() => handleDeleteItem(rIdx, subItem.id)}
+                                              onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
+                                              onBranchAround={() => handleBranchAroundItem(rIdx, subItem.id)}
+                                            />
+                                          )}
+                                        </React.Fragment>
+                                      ))}
+  
+                                      {/* Add Instruction to Branch Path */}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAddContactToBranchPath(rIdx, item.id, pathIdx, true);
+                                        }}
+                                        className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-mono border border-slate-700 cursor-pointer transition active:scale-95"
+                                      >
+                                        + Output
+                                      </button>
+                                    </div>
+                                  ))}
+  
+                                  {/* Add Path Button */}
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleAddLevelToBranch(rIdx, item.id); }}
+                                    className="mt-1.5 w-full py-1.5 rounded-lg bg-amber-950/40 hover:bg-amber-900/80 border border-amber-500/30 hover:border-amber-400 text-amber-300 text-[10px] font-mono font-bold flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer"
+                                  >
+                                    <Plus className="w-3 h-3" /> Add OR Path
+                                  </button>
+                                </div>
+  
+                                {/* Right Branch Rail (Vertical Tie) */}
+                                <div className="flex flex-col items-center justify-between ml-2 py-1">
+                                  <span className="text-[10px] text-amber-400 font-bold">?</span>
+                                  <div className={`w-1 flex-1 rounded-full ${branchActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                                  <span className="text-[10px] text-amber-400 font-bold">?</span>
+                                </div>
+  
+                                {/* Branch Controls */}
+                                <div className="flex flex-col justify-between ml-1.5">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteItem(rIdx, item.id); }}
+                                    className="text-slate-500 hover:text-red-400 p-0.5 rounded transition cursor-pointer"
+                                    title="Delete Parallel Branch"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            </React.Fragment>
+                          );
+                        }
 
-                    {/* Button / Drop Zone: Add Output */}
+                        return (
+                          <React.Fragment key={item.id}>
+                            <WireJunctionHandle 
+                              rungIdx={rIdx} 
+                              itemIdx={idx} 
+                              onDropJunction={handleCreateBranchSpan} 
+                              isBranchMode={isBranchMode}
+                              branchStartNode={branchStartNode}
+                              onNodeClick={handleNodeClick}
+                              isOutputZone={true}
+                            />
+                            <div className="relative group mx-1">
+                              {item.type === 'TON' ? (
+                                <TimerInstructionBlock
+                                  item={item}
+                                  isSelected={selectedItemId === item.id}
+                                  isActive={isElementActive(rung.id, item.id)}
+                                  plcData={plcData}
+                                  onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
+                                  onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                                  onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
+                                  onDelete={() => handleDeleteItem(rIdx, item.id)}
+                                  onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
+                                  onBranchAround={() => handleBranchAroundItem(rIdx, item.id)}
+                                />
+                              ) : ['ADD', 'SUB', 'MUL', 'DIV', 'MOV', 'EQU'].includes(item.type) ? (
+                                <MathInstructionBlock
+                                  item={item}
+                                  isSelected={selectedItemId === item.id}
+                                  isActive={isElementActive(rung.id, item.id)}
+                                  plcData={plcData}
+                                  onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
+                                  onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                                  onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
+                                  onDelete={() => handleDeleteItem(rIdx, item.id)}
+                                  onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
+                                  onBranchAround={() => handleBranchAroundItem(rIdx, item.id)}
+                                />
+                              ) : (
+                                <RungElementCard
+                                  symbols={symbols}
+                                  item={item}
+                                  isSelected={selectedItemId === item.id}
+                                  isActive={isElementActive(rung.id, item.id)}
+                                  onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
+                                  onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                                  onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
+                                  onDelete={() => handleDeleteItem(rIdx, item.id)}
+                                  onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
+                                  onBranchAround={() => handleBranchAroundItem(rIdx, item.id)}
+                                />
+                              )}
+                            </div>
+                          </React.Fragment>
+                        );
+                      })}
+                      <WireJunctionHandle 
+                        rungIdx={rIdx} 
+                        itemIdx={outputItems.length} 
+                        onDropJunction={handleCreateBranchSpan} 
+                        isBranchMode={isBranchMode}
+                        branchStartNode={branchStartNode}
+                        onNodeClick={handleNodeClick}
+                        isOutputZone={true}
+                      />
+
+                      {/* Button / Drop Zone: Add Output */}
                     <div
                       onDragOver={(e) => { e.preventDefault(); setDragOverTarget(`zone_${rIdx}_out`); }}
                       onDragLeave={() => setDragOverTarget(null)}
@@ -1542,3 +1717,12 @@ function WireJunctionHandle({ rungIdx, itemIdx, onDropJunction, isBranchMode, br
 }
 
 export default LadderEditor;
+
+
+
+
+
+
+
+
+
