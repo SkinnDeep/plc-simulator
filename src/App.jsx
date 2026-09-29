@@ -4,6 +4,7 @@ import { createInitialDataModel } from './types/plcTypes';
 import { SAMPLE_PROGRAMS } from './data/samplePrograms';
 import { Header } from './components/Header';
 import { HardwareTrainer } from './components/HardwareTrainer';
+import { MetalShearSandbox } from './components/MetalShearSandbox';
 import { LadderEditor } from './components/LadderEditor';
 import { LearningTab } from './components/LearningTab';
 import { SpotlightTour } from './components/SpotlightTour';
@@ -20,6 +21,7 @@ const INITIAL_BLANK_RUNGS = [
 ];
 
 export function App() {
+  const [activeSandbox, setActiveSandbox] = useState('HardwareTrainer');
   const [plcData, setPlcData] = useState(() => createInitialDataModel());
   const [isRunning, setIsRunning] = useState(false);
   const [symbols, setSymbols] = useState(() => {
@@ -325,13 +327,35 @@ export function App() {
               <div className={`w-full lg:w-[410px] shrink-0 flex-col overflow-y-auto ${
                 mobileView === 'bench' ? 'flex flex-1' : 'hidden lg:flex'
               }`}>
-                <HardwareTrainer
-                  plcData={plcData}
-                  onToggleInput={handleToggleInput}
-                  isRunning={isRunning}
-                  theme={theme}
-                  symbols={symbols}
-                />
+                <div className="flex bg-slate-900 border border-slate-700 rounded-lg p-1 mb-2">
+                  <button
+                    onClick={() => setActiveSandbox('HardwareTrainer')}
+                    className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${activeSandbox === 'HardwareTrainer' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                  >
+                    PLC 1: Lights & Switches
+                  </button>
+                  <button
+                    onClick={() => setActiveSandbox('MetalShear')}
+                    className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${activeSandbox === 'MetalShear' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                  >
+                    PLC 2: Metal Shear
+                  </button>
+                </div>
+                {activeSandbox === 'HardwareTrainer' ? (
+                  <HardwareTrainer
+                    plcData={plcData}
+                    onToggleInput={handleToggleInput}
+                    isRunning={isRunning}
+                    theme={theme}
+                    symbols={symbols}
+                  />
+                ) : (
+                  <MetalShearSandbox
+                    plcData={plcData}
+                    onToggleInput={handleToggleInput}
+                    isRunning={isRunning}
+                  />
+                )}
               </div>
 
               {/* Right: Ladder Editor */}
