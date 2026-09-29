@@ -166,10 +166,20 @@ export function App() {
     setTimeout(() => setLoadNotice(null), 3000);
   };
 
+  const handleResetMemory = () => {
+    engine.stop();
+    setIsRunning(false);
+    const fresh = createInitialDataModel();
+    engine.data = fresh;
+    if (engine.latchedOutputs) engine.latchedOutputs.clear();
+    setPlcData(fresh);
+    engine.lastScanTime = performance.now();
+    setScanResult(null);
+  };
+
   const handleToggleRun = () => {
     if (isRunning) {
-      engine.stop();
-      setIsRunning(false);
+      handleResetMemory();
     } else {
       setHasAttemptedRun(true);
       const allIssues = validateLadderLogic(currentRungs, true);
@@ -204,17 +214,6 @@ export function App() {
       S2: { ...engine.data.S2 }
     });
     setScanResult(res);
-  };
-
-  const handleResetMemory = () => {
-    engine.stop();
-    setIsRunning(false);
-    const fresh = createInitialDataModel();
-    engine.data = fresh;
-    if (engine.latchedOutputs) engine.latchedOutputs.clear();
-    setPlcData(fresh);
-    engine.lastScanTime = performance.now();
-    setScanResult(null);
   };
 
   const handleSetRegister = (addr, val) => {
