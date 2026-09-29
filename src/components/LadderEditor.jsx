@@ -1685,15 +1685,15 @@ function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, o
 }
 
 // Small gray square that appears on wires during branch mode
-function BranchDotNode({ rungIdx, itemIdx, isBranchMode, branchStartNode, onNodeClick }) {
+function BranchDotNode({ rungIdx, itemIdx, isBranchMode, branchStartNode, onNodeClick, isOutputZone = false }) {
   if (!isBranchMode) return <div className="w-4 h-[1px] shrink-0 bg-transparent" />;
   
-  const isStart = branchStartNode?.rungIdx === rungIdx && branchStartNode?.itemIdx === itemIdx;
+  const isStart = branchStartNode?.rungIdx === rungIdx && branchStartNode?.itemIdx === itemIdx && branchStartNode?.isOutputZone === isOutputZone;
   
   return (
     <div 
       className="flex items-center justify-center w-4 h-4 cursor-pointer relative z-20 group bg-slate-900 mx-1" 
-      onClick={(e) => { e.stopPropagation(); onNodeClick(rungIdx, itemIdx); }}
+      onClick={(e) => { e.stopPropagation(); onNodeClick(rungIdx, itemIdx, isOutputZone); }}
     >
       <div className={`transition-all rounded-[1px] ${
         isStart 
@@ -1704,19 +1704,22 @@ function BranchDotNode({ rungIdx, itemIdx, isBranchMode, branchStartNode, onNode
   );
 }
 
-function WireJunctionHandle({ rungIdx, itemIdx, onDropJunction, isBranchMode, branchStartNode, onNodeClick }) {
+function WireJunctionHandle({ rungIdx, itemIdx, isBranchMode, branchStartNode, onNodeClick, isOutputZone = false }) {
   return (
     <BranchDotNode 
       rungIdx={rungIdx} 
       itemIdx={itemIdx} 
       isBranchMode={isBranchMode} 
       branchStartNode={branchStartNode} 
-      onNodeClick={onNodeClick} 
+      onNodeClick={onNodeClick}
+      isOutputZone={isOutputZone}
     />
   );
 }
 
 export default LadderEditor;
+
+
 
 
 
