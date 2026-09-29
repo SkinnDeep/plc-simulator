@@ -41,7 +41,8 @@ export function Header({
         </div>
 
       {/* Primary Actions: RUN/STOP, RESET, PRESETS, BIT MONITOR */}
-      <div id="tour-controls" role="group" aria-label="Program controls" className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
+      <div className="flex flex-col xl:flex-row flex-wrap items-end xl:items-center justify-end gap-2 xl:gap-3 flex-1">
+        <div id="tour-controls" role="group" aria-label="Program controls" className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
         {/* RUN / STOP Button */}
         <button
           id="tour-run"
@@ -221,6 +222,7 @@ export function Header({
             <span className="">Learning</span>
           </button>
         </div>
+      </div>
       </div>
     </header>
   );

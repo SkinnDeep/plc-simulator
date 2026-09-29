@@ -324,7 +324,7 @@ export function App() {
             {/* Desktop side-by-side or Mobile toggled views */}
             <div className="flex-1 flex flex-col lg:flex-row gap-3 overflow-hidden">
               {/* Left: Hardware Trainer */}
-              <div className={`w-full lg:w-[410px] shrink-0 flex-col overflow-y-auto ${
+              <div className={`w-full lg:w-[320px] shrink-0 flex-col overflow-y-auto ${
                 mobileView === 'bench' ? 'flex flex-1' : 'hidden lg:flex'
               }`}>
                 <div className="flex bg-slate-900 border border-slate-700 rounded-lg p-1 mb-2">
@@ -430,3 +430,4 @@ export function App() {
   );
 }
 export default App;
+
