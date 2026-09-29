@@ -119,6 +119,8 @@ export function LadderEditor({
       params = { sourceA: 'N7:0', sourceB: '1', dest: 'N7:1' };
     } else if (type === 'MOV') {
       params = { source: 'N7:0', dest: 'N7:1' };
+    } else if (type === 'EQU') {
+      params = { sourceA: 'N7:0', sourceB: '1' };
     }
 
     const newItem = {
@@ -930,7 +932,7 @@ export function LadderEditor({
                             onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
                           />
                         );
-                      } else if (['ADD', 'SUB', 'MUL', 'DIV'].includes(item.type)) {
+                      } else if (['ADD', 'SUB', 'MUL', 'DIV', 'MOV', 'EQU'].includes(item.type)) {
                         return (
                           <MathInstructionBlock
                             key={item.id}
@@ -1243,9 +1245,70 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
   );
 }
 
-// Minimalist Math Block
-function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onDelete }) {
-  return <RungElementCard item={item} isSelected={isSelected} isActive={isActive} onSelect={onSelect} onOpenPicker={onOpenPicker} onDelete={onDelete} />;
+function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete }) {
+  const color = isActive ? 'text-emerald-400' : 'text-slate-300';
+  const borderColor = isActive ? 'border-emerald-500/60' : 'border-[#3c414a]';
+  const bgHeader = isActive ? 'bg-emerald-950/30' : 'bg-[#1a1c20]';
+  const bgBody = 'bg-[#22252a]';
+  
+  const getTitle = () => {
+    switch (item.type) {
+      case 'ADD': return 'Add';
+      case 'SUB': return 'Subtract';
+      case 'MUL': return 'Multiply';
+      case 'DIV': return 'Divide';
+      case 'MOV': return 'Move';
+      case 'EQU': return 'Equal';
+      default: return item.type;
+    }
+  };
+
+  const hasSourceA = ['ADD', 'SUB', 'MUL', 'DIV', 'EQU'].includes(item.type);
+  const hasSourceB = ['ADD', 'SUB', 'MUL', 'DIV', 'EQU'].includes(item.type);
+  const hasDest = ['ADD', 'SUB', 'MUL', 'DIV', 'MOV'].includes(item.type);
+  const hasSource = item.type === 'MOV';
+
+  const renderField = (label, paramKey, defaultVal) => {
+    return (
+      <div className="flex justify-between items-center text-[10px]">
+        <span className="text-slate-400 mr-2">{label}</span>
+        <input 
+          type="text"
+          value={item.params?.[paramKey] !== undefined ? item.params[paramKey] : defaultVal}
+          onChange={(e) => onUpdate({ params: { ...(item.params || {}), [paramKey]: e.target.value } })}
+          onClick={(e) => e.stopPropagation()}
+          className="font-mono text-cyan-300 bg-slate-900 border border-slate-700 hover:border-slate-500 focus:outline-none w-[60px] text-right rounded px-1 py-0.5"
+        />
+      </div>
+    );
+  };
+
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      className={`flex flex-col border-2 ${borderColor} rounded overflow-hidden select-none relative cursor-pointer min-w-[130px] shadow-md mx-2 ${isSelected ? 'ring-2 ring-cyan-500' : ''}`}
+    >
+      <div className={`${bgHeader} px-2 py-1 border-b ${borderColor} flex justify-between items-center`}>
+        <span className={`text-[10px] font-bold ${color}`}>{item.type}</span>
+        <span className="text-[9px] text-slate-400 font-mono ml-2">{getTitle()}</span>
+      </div>
+      
+      <div className={`${bgBody} p-2 flex flex-col gap-1.5`}>
+        {hasSource && renderField('Source', 'source', '0')}
+        {hasSourceA && renderField('Source A', 'sourceA', '0')}
+        {hasSourceB && renderField('Source B', 'sourceB', '0')}
+        {hasDest && renderField('Dest', 'dest', 'N7:0')}
+      </div>
+      
+      {isSelected && (
+        <div className="absolute -top-6 right-[-10px] flex items-center bg-[#2d2d2d] border border-[#404040] shadow-xl rounded z-50">
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 hover:text-red-400 text-slate-400" title="Delete">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Small gray square that appears on wires during branch mode
