@@ -808,16 +808,31 @@ export function LadderEditor({
                                     </span>
 
                                     {path.map(subItem => (
-                                      <RungElementCard
-                                        key={subItem.id}
-                                        item={subItem}
-                                        isSelected={selectedItemId === subItem.id}
-                                        isActive={isElementActive(rung.id, subItem.id)}
-                                        onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
-                                        onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
-                                        onDelete={() => handleDeleteItem(rIdx, subItem.id)}
-                                        onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
-                                      />
+                                      <React.Fragment key={subItem.id}>
+                                        {['EQU'].includes(subItem.type) ? (
+                                          <MathInstructionBlock
+                                            item={subItem}
+                                            isSelected={selectedItemId === subItem.id}
+                                            isActive={isElementActive(rung.id, subItem.id)}
+                                            plcData={plcData}
+                                            onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
+                                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                            onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
+                                            onDelete={() => handleDeleteItem(rIdx, subItem.id)}
+                                            onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
+                                          />
+                                        ) : (
+                                          <RungElementCard
+                                            item={subItem}
+                                            isSelected={selectedItemId === subItem.id}
+                                            isActive={isElementActive(rung.id, subItem.id)}
+                                            onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
+                                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                            onDelete={() => handleDeleteItem(rIdx, subItem.id)}
+                                            onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
+                                          />
+                                        )}
+                                      </React.Fragment>
                                     ))}
 
                                     <button
@@ -873,16 +888,30 @@ export function LadderEditor({
   onNodeClick={handleNodeClick}
 />
                           <div className="relative group mx-1">
-                            <RungElementCard
-                              item={item}
-                              isSelected={selectedItemId === item.id}
-                              isActive={isElementActive(rung.id, item.id)}
-                              onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                              onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
-                              onDelete={() => handleDeleteItem(rIdx, item.id)}
-                              onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
-                              onBranchAround={() => handleBranchAroundItem(rIdx, item.id)}
-                            />
+                            {['EQU'].includes(item.type) ? (
+                              <MathInstructionBlock
+                                item={item}
+                                isSelected={selectedItemId === item.id}
+                                isActive={isElementActive(rung.id, item.id)}
+                                plcData={plcData}
+                                onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
+                                onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                                onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
+                                onDelete={() => handleDeleteItem(rIdx, item.id)}
+                                onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
+                              />
+                            ) : (
+                              <RungElementCard
+                                item={item}
+                                isSelected={selectedItemId === item.id}
+                                isActive={isElementActive(rung.id, item.id)}
+                                onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
+                                onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                                onDelete={() => handleDeleteItem(rIdx, item.id)}
+                                onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
+                                onBranchAround={() => handleBranchAroundItem(rIdx, item.id)}
+                              />
+                            )}
                           </div>
                         </React.Fragment>
                       );
