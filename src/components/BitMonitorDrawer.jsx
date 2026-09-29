@@ -58,6 +58,15 @@ export function BitMonitorDrawer({
     return () => { document.removeEventListener('keydown', handleKey); previous?.focus(); };
   }, [isOpen]);
 
+  const handleDragStart = (e, addr, isOutput = false) => {
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      kind: 'io',
+      addr,
+      isOutput
+    }));
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
   if (!isOpen) return null;
 
   const bits = plcData?.bits || {};
@@ -192,6 +201,8 @@ export function BitMonitorDrawer({
               {filteredInputs.map(item => (
                 <div
                   key={item.addr}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, item.addr, false)}
                   onClick={() => onToggleInput && onToggleInput(item.addr, !item.val)}
                   role="button" tabIndex={0} aria-label={item.name} aria-pressed={item.val}
                   onKeyDown={(e) => { if ([' ', 'Enter'].includes(e.key)) { e.preventDefault(); onToggleInput?.(item.addr, !item.val); } }}
@@ -229,7 +240,9 @@ export function BitMonitorDrawer({
               {filteredOutputs.map(item => (
                 <div
                   key={item.addr}
-                  className={`flex items-center justify-between px-3 py-1.5 rounded-lg border transition ${
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, item.addr, true)}
+                  className={`flex items-center justify-between px-3 py-1.5 rounded-lg border transition cursor-pointer hover:border-slate-600 ${
                     item.val
                       ? 'bg-amber-950/60 border-amber-500 text-white shadow-[0_0_10px_rgba(245,158,11,0.25)]'
                       : 'bg-slate-900 border-slate-800 text-slate-300'
@@ -278,7 +291,9 @@ export function BitMonitorDrawer({
               {filteredB3.map(item => (
                 <div
                   key={item.addr}
-                  className={`flex items-center justify-between px-3 py-1 rounded-lg border text-xs transition ${
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, item.addr, false)}
+                  className={`flex items-center justify-between px-3 py-1 rounded-lg border text-xs transition cursor-pointer hover:border-slate-600 ${
                     item.val
                       ? 'bg-blue-950/60 border-blue-500 text-blue-200'
                       : 'bg-slate-900/60 border-slate-800 text-slate-400'
@@ -315,7 +330,9 @@ export function BitMonitorDrawer({
                 return (
                   <div
                     key={timer.id}
-                    className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, timer.id, true)}
+                    className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5 cursor-pointer hover:border-slate-600"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
@@ -367,7 +384,9 @@ export function BitMonitorDrawer({
                 return (
                   <div
                     key={idx}
-                    className="p-2 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, addr, false)}
+                    className="p-2 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between cursor-pointer hover:border-slate-600"
                   >
                     <div className="flex flex-col">
                       <span className="text-xs font-mono font-bold text-indigo-400">{addr}</span>
