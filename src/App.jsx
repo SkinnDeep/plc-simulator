@@ -262,7 +262,7 @@ export function App() {
   };
 
   return (
-    <div className={`app-shell flex flex-col h-screen w-full bg-slate-950 bg-grid-pattern text-slate-100 overflow-hidden font-sans ${theme === 'light' ? 'light-mode' : ''}`}>
+    <div className={`app-shell flex flex-col min-h-screen sm:min-h-[900px] w-full bg-slate-950 bg-grid-pattern text-slate-100 overflow-x-hidden overflow-y-auto font-sans ${theme === 'light' ? 'light-mode' : ''}`}>
       {/* 1. Header Toolbar */}
       <Header
         isRunning={isRunning}
@@ -294,7 +294,7 @@ export function App() {
       )}
 
       {/* 2. Main View Area */}
-      <div className="flex-1 flex flex-col p-2 sm:p-3 overflow-hidden">
+      <div className="flex-1 flex flex-col p-2 sm:p-3">
         {activeMainTab === 'simulator' && (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Mobile Sub-View Segmented Switch (visible on screens < lg) */}
@@ -322,9 +322,9 @@ export function App() {
             </div>
 
             {/* Desktop side-by-side or Mobile toggled views */}
-            <div className="flex-1 flex flex-col lg:flex-row gap-3 overflow-hidden">
+            <div className="flex-1 flex flex-col lg:flex-row gap-3 min-h-[600px]">
               {/* Left: Hardware Trainer */}
-              <div className={`w-full lg:w-[320px] shrink-0 flex-col overflow-y-auto ${
+              <div className={`w-full lg:w-[380px] shrink-0 flex-col overflow-y-auto ${
                 mobileView === 'bench' ? 'flex flex-1' : 'hidden lg:flex'
               }`}>
                 <div className="flex bg-slate-900 border border-slate-700 rounded-lg p-1 mb-2">
@@ -430,4 +430,5 @@ export function App() {
   );
 }
 export default App;
+
 
