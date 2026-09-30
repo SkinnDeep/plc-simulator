@@ -294,9 +294,9 @@ export function App() {
       )}
 
       {/* 2. Main View Area */}
-      <div className="flex-1 flex flex-col p-2 sm:p-3 overflow-hidden">
+      <div className="flex-1 flex flex-col p-2 sm:p-3 overflow-hidden min-h-0">
         {activeMainTab === 'simulator' && (
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             {/* Mobile Sub-View Segmented Switch (visible on screens < lg) */}
             <div className="flex lg:hidden bg-slate-900 border border-slate-800 rounded-xl p-1 mb-2 font-bold text-xs shrink-0 shadow-sm">
               <button
@@ -322,9 +322,9 @@ export function App() {
             </div>
 
             {/* Desktop side-by-side or Mobile toggled views */}
-            <div className="flex-1 flex flex-col lg:flex-row gap-3 overflow-hidden">
+            <div className="flex-1 flex flex-col lg:flex-row gap-3 overflow-hidden min-h-0">
               {/* Left: Hardware Trainer */}
-              <div className={`w-full lg:w-[380px] shrink-0 flex-col overflow-y-auto ${
+              <div className={`w-full lg:w-[380px] shrink-0 flex-col overflow-y-auto min-h-0 pr-1 ${
                 mobileView === 'bench' ? 'flex flex-1' : 'hidden lg:flex'
               }`}>
                 <div className="flex bg-slate-900 border border-slate-700 rounded-lg p-1 mb-2">
@@ -359,7 +359,7 @@ export function App() {
               </div>
 
               {/* Right: Ladder Editor */}
-              <div className={`flex-1 flex-col overflow-hidden min-w-0 ${
+              <div className={`flex-1 flex-col overflow-hidden min-w-0 min-h-0 ${
                 mobileView === 'ladder' ? 'flex' : 'hidden lg:flex'
               }`}>
                 <LadderEditor
