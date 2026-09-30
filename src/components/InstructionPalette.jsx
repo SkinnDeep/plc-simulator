@@ -50,6 +50,36 @@ export function InstructionPalette({
     e.dataTransfer.effectAllowed = 'copyMove';
   };
 
+  const getInstTheme = (inst) => {
+    if (inst.isBranch) {
+      return isBranchMode 
+        ? 'border-blue-400 bg-blue-500/25 text-blue-200 shadow-[0_0_10px_rgba(59,130,246,0.35)]' 
+        : 'border-blue-500/35 bg-blue-950/20 text-blue-300 hover:border-blue-400 hover:bg-blue-900/40 hover:text-blue-200';
+    }
+    if (inst.type === 'XIC' || inst.type === 'XIO') {
+      return 'border-cyan-500/30 bg-cyan-950/20 text-cyan-300 hover:border-cyan-400 hover:bg-cyan-900/40 hover:text-cyan-200';
+    }
+    if (inst.isOutput || ['OTE', 'OTL', 'OTU'].includes(inst.type)) {
+      return 'border-amber-500/30 bg-amber-950/20 text-amber-300 hover:border-amber-400 hover:bg-amber-900/40 hover:text-amber-200';
+    }
+    if (['TON', 'RES'].includes(inst.type)) {
+      return 'border-purple-500/30 bg-purple-950/20 text-purple-300 hover:border-purple-400 hover:bg-purple-900/40 hover:text-purple-200';
+    }
+    if (['ADD', 'SUB', 'MUL', 'DIV'].includes(inst.type)) {
+      return 'border-teal-500/30 bg-teal-950/20 text-teal-300 hover:border-teal-400 hover:bg-teal-900/40 hover:text-teal-200';
+    }
+    if (inst.type === 'EQU') {
+      return 'border-orange-500/30 bg-orange-950/20 text-orange-300 hover:border-orange-400 hover:bg-orange-900/40 hover:text-orange-200';
+    }
+    if (inst.type === 'MOV') {
+      return 'border-sky-500/30 bg-sky-950/20 text-sky-300 hover:border-sky-400 hover:bg-sky-900/40 hover:text-sky-200';
+    }
+    if (['ONS', 'OSR', 'OSF'].includes(inst.type)) {
+      return 'border-indigo-500/30 bg-indigo-950/20 text-indigo-300 hover:border-indigo-400 hover:bg-indigo-900/40 hover:text-indigo-200';
+    }
+    return 'border-slate-700/60 bg-slate-900/30 text-slate-300 hover:border-slate-500 hover:bg-slate-800';
+  };
+
   const renderIcons = (icons) => (
     <div className="instruction-buttons">
       {icons.map(inst => (
@@ -60,14 +90,11 @@ export function InstructionPalette({
           draggable={!disabled && !inst.isBranch}
           onDragStart={(e) => !inst.isBranch && handleDragStart(e, { kind: 'instruction', type: inst.type, isOutput: inst.isOutput })}
           onClick={() => inst.isBranch ? onToggleBranchMode() : onAddInstruction(inst.type)}
-          className={`instruction-button ${
-            inst.isBranch && isBranchMode
-              ? 'bg-blue-500/20 border-blue-400 text-blue-300'
-              : 'bg-transparent border-transparent hover:bg-[#2d2d2d] text-slate-300 hover:text-white'
-          }`}
+          className={`instruction-button border transition-all ${getInstTheme(inst)}`}
           title={inst.name}
         >
-          <span className="instruction-symbol">{inst.symbol}</span><span className="instruction-name">{inst.type === 'BRANCH' ? 'Branch' : inst.type}</span>
+          <span className="instruction-symbol">{inst.symbol}</span>
+          <span className="instruction-name">{inst.type === 'BRANCH' ? 'Branch' : inst.type}</span>
         </button>
       ))}
     </div>

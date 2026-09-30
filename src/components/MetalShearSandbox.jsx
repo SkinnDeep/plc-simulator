@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { CircleDot } from 'lucide-react';
+import { Scissors, Activity, SlidersHorizontal, ArrowRight, Gauge } from 'lucide-react';
 
 export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
   const isBitOn = (addr) => !!plcData?.bits?.[addr];
@@ -148,158 +148,232 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
     }
   }, []);
 
+  const isStartPressed = activePress === 'START' || isBitOn('I:0/0');
+  const isStopPressed = activePress === 'STOP' || !isBitOn('I:0/1');
+
   return (
-    <div className="bg-[#212328] border-2 border-[#3c414a] rounded-2xl p-4 shadow-[0_0_25px_rgba(0,0,0,0.5)] flex flex-col gap-4 select-none relative overflow-hidden h-[450px] shrink-0">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-orange-600 flex items-center justify-center font-bold text-xs text-white shadow-sm">
-            MS
+    <div id="tour-trainer" className="hardware-trainer metal-shear-trainer select-none">
+      {/* 1. Header & Module Identification */}
+      <div className="controller-heading">
+        <span className="controller-icon" style={{ color: '#f97316', borderColor: 'rgba(249,115,22,0.35)', background: 'rgba(249,115,22,0.1)' }}>
+          <Scissors size={20} strokeWidth={1.5} />
+        </span>
+        <div>
+          <h3>Metal Shear Station</h3>
+          <p>Continuous Sheet Cut-to-Length</p>
+        </div>
+        <span className={`controller-state ${isRunning ? 'on' : ''}`}>
+          <i />{isRunning ? 'Running' : 'Idle'}
+        </span>
+      </div>
+
+      {/* 2. Simulation Viewport Section */}
+      <section className="hardware-section" style={{ padding: '12px 14px' }}>
+        <div className="hardware-section-heading" style={{ marginBottom: '8px' }}>
+          <h4><Activity size={14} />Simulation cell</h4>
+          <span>O:0/0-3 · I:0/2-4</span>
+        </div>
+
+        {/* Viewport Frame */}
+        <div 
+          className="relative bg-slate-950/90 rounded-lg border border-slate-700/80 overflow-hidden shadow-inner"
+          style={{ height: '175px' }}
+          ref={containerRef}
+        >
+          {/* Subtle grid background */}
+          <div className="absolute inset-0 opacity-15 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #38bdf8 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+
+          {/* Status Overlay: Limit Switches & Sensors */}
+          <div className="absolute top-2 right-2 flex flex-col gap-1 z-20 text-[9px] font-mono">
+            <div className={`px-2 py-0.5 rounded border flex items-center gap-1.5 transition-colors ${
+              uiState.sensors.UP_LS 
+                ? 'bg-cyan-950/70 border-cyan-500/50 text-cyan-300' 
+                : 'bg-slate-900/60 border-slate-700/50 text-slate-500'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${uiState.sensors.UP_LS ? 'bg-cyan-400 shadow-[0_0_6px_#22d3ee]' : 'bg-slate-600'}`} />
+              <span>UP_LS (I:0/4)</span>
+            </div>
+            <div className={`px-2 py-0.5 rounded border flex items-center gap-1.5 transition-colors ${
+              uiState.sensors.DOWN_LS 
+                ? 'bg-amber-950/70 border-amber-500/50 text-amber-300' 
+                : 'bg-slate-900/60 border-slate-700/50 text-slate-500'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${uiState.sensors.DOWN_LS ? 'bg-amber-400 shadow-[0_0_6px_#f59e0b]' : 'bg-slate-600'}`} />
+              <span>DOWN_LS (I:0/3)</span>
+            </div>
+            <div className={`px-2 py-0.5 rounded border flex items-center gap-1.5 transition-colors ${
+              uiState.sensors.PROX 
+                ? 'bg-yellow-950/70 border-yellow-500/50 text-yellow-300' 
+                : 'bg-slate-900/60 border-slate-700/50 text-slate-500'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${uiState.sensors.PROX ? 'bg-yellow-400 shadow-[0_0_6px_#eab308]' : 'bg-slate-600'}`} />
+              <span>PROX (I:0/2)</span>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100 flex items-center gap-1.5">
-              <span>Metal Shear Station</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
-                SANDBOX
-              </span>
-            </h3>
-            <div className="text-[9px] text-slate-500 font-mono flex items-center gap-2 mt-0.5">
-              <span className="flex items-center gap-1"><CircleDot className="w-2.5 h-2.5" /> PLC 2 Environment</span>
+
+          {/* Conveyor 1 */}
+          <div 
+            className={`absolute bottom-4 h-4 border-t flex items-center justify-around overflow-hidden transition-colors ${
+              conv1On 
+                ? 'bg-emerald-950/40 border-emerald-500/60 shadow-[0_0_10px_rgba(16,185,129,0.15)]' 
+                : 'bg-slate-900/80 border-slate-700/70'
+            }`}
+            style={{ left: 0, width: toPct(SHEAR_X) }}
+          >
+            <div className={`w-2.5 h-2.5 rounded-full border ${conv1On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
+            <div className={`w-2.5 h-2.5 rounded-full border ${conv1On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
+          </div>
+          <div className="absolute bottom-0 text-[8px] font-mono text-slate-400 flex items-center gap-1" style={{ left: toPct(SHEAR_X / 2 - 14) }}>
+            <span className={conv1On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>C1 (O:0/0)</span>
+          </div>
+
+          {/* Conveyor 2 */}
+          <div 
+            className={`absolute bottom-4 h-4 border-t flex items-center justify-around overflow-hidden transition-colors ${
+              conv2On 
+                ? 'bg-emerald-950/40 border-emerald-500/60 shadow-[0_0_10px_rgba(16,185,129,0.15)]' 
+                : 'bg-slate-900/80 border-slate-700/70'
+            }`}
+            style={{ left: toPct(SHEAR_X + 2), width: toPct(END_CONV2_X - SHEAR_X - 4) }}
+          >
+            <div className={`w-2.5 h-2.5 rounded-full border ${conv2On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
+            <div className={`w-2.5 h-2.5 rounded-full border ${conv2On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
+          </div>
+          <div className="absolute bottom-0 text-[8px] font-mono text-slate-400 flex items-center gap-1" style={{ left: toPct((SHEAR_X + END_CONV2_X) / 2 - 14) }}>
+            <span className={conv2On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>C2 (O:0/1)</span>
+          </div>
+
+          {/* Conveyor 3 */}
+          <div 
+            className={`absolute bottom-4 h-4 border-t flex items-center justify-around overflow-hidden transition-colors ${
+              conv3On 
+                ? 'bg-emerald-950/40 border-emerald-500/60 shadow-[0_0_10px_rgba(16,185,129,0.15)]' 
+                : 'bg-slate-900/80 border-slate-700/70'
+            }`}
+            style={{ left: toPct(END_CONV2_X), right: 0 }}
+          >
+            <div className={`w-2.5 h-2.5 rounded-full border ${conv3On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
+            <div className={`w-2.5 h-2.5 rounded-full border ${conv3On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
+          </div>
+          <div className="absolute bottom-0 text-[8px] font-mono text-slate-400 flex items-center gap-1" style={{ left: toPct((END_CONV2_X + DROP_X) / 2 - 14) }}>
+            <span className={conv3On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>C3 (O:0/3)</span>
+          </div>
+
+          {/* The Continuous Sheet / Strip */}
+          <div 
+            className="absolute bottom-8 h-2 bg-gradient-to-r from-slate-400 to-slate-200 border-y border-white/20 shadow-sm"
+            style={{ left: 0, width: toPct(uiState.stripX) }}
+          />
+
+          {/* Cut Sheets on Conveyor */}
+          {uiState.cutSheets.map(sheet => (
+            <div 
+              key={sheet.id}
+              className="absolute bottom-8 h-2 bg-gradient-to-r from-cyan-400 to-cyan-200 border-l border-r border-white/30 shadow-sm"
+              style={{ left: toPct(sheet.tailX), width: toPct(sheet.headX - sheet.tailX) }}
+            />
+          ))}
+
+          {/* Photoelectric PROX Sensor Beam */}
+          <div 
+            className="absolute top-8 w-2 h-10 flex flex-col items-center pointer-events-none"
+            style={{ left: toPct(PROX_X) }}
+          >
+            <div className={`w-3 h-3 rounded-full border ${
+              uiState.sensors.PROX 
+                ? 'bg-yellow-400 border-yellow-200 shadow-[0_0_8px_#eab308]' 
+                : 'bg-yellow-900/60 border-yellow-700/50'
+            }`} />
+            {/* Optical beam down to strip */}
+            <div className={`w-[1.5px] flex-1 transition-opacity ${
+              uiState.sensors.PROX 
+                ? 'bg-yellow-400 opacity-90 shadow-[0_0_6px_#eab308]' 
+                : 'bg-yellow-500/30 opacity-40'
+            }`} />
+          </div>
+
+          {/* Hydraulic Shear Mechanism */}
+          <div 
+            className="absolute top-2 bottom-8 w-6 flex flex-col items-center z-10 pointer-events-none"
+            style={{ left: `calc(${toPct(SHEAR_X)} - 12px)` }}
+          >
+            {/* Hydraulic Cylinder */}
+            <div className={`w-6 h-9 rounded-t border flex items-center justify-center transition-colors ${
+              bladeDown 
+                ? 'bg-amber-950/80 border-amber-500/70 shadow-[0_0_10px_rgba(245,158,11,0.25)]' 
+                : 'bg-slate-800 border-slate-600'
+            }`}>
+              <span className="text-[7px] font-mono font-bold text-amber-300">O:0/2</span>
+            </div>
+            {/* Cylinder Rod */}
+            <div 
+              className="w-1.5 bg-slate-300 shadow-inner"
+              style={{ height: `${10 + (uiState.bladeY * 0.45)}px` }}
+            />
+            {/* Shear Blade */}
+            <div className="w-8 h-4 bg-slate-200 border-b-2 border-slate-400 shadow-md relative rounded-b-[2px]">
+              <div className="absolute inset-x-0 bottom-0 h-1 bg-amber-400/80" />
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Physics Viewer */}
-      <div className="flex-1 bg-black rounded-xl border border-slate-700 relative overflow-hidden" ref={containerRef}>
-        {/* Conveyor 1 */}
-        <div 
-          className="absolute bottom-4 h-4 bg-slate-800 border-t border-slate-600 flex items-center justify-around overflow-hidden"
-          style={{ left: 0, width: toPct(SHEAR_X) }}
-        >
-          <div className={`w-3 h-3 rounded-full border-2 border-slate-500 ${conv1On ? 'animate-spin' : ''}`} />
-          <div className={`w-3 h-3 rounded-full border-2 border-slate-500 ${conv1On ? 'animate-spin' : ''}`} />
-        </div>
-        <div className="absolute bottom-0 text-[8px] text-slate-500" style={{ left: toPct(SHEAR_X / 2 - 10) }}>Conv 1</div>
-
-        {/* Conveyor 2 */}
-        <div 
-          className="absolute bottom-4 h-4 bg-slate-800 border-t border-slate-600 flex items-center justify-around overflow-hidden"
-          style={{ left: toPct(SHEAR_X + 2), width: toPct(END_CONV2_X - SHEAR_X - 4) }}
-        >
-          <div className={`w-3 h-3 rounded-full border-2 border-slate-500 ${conv2On ? 'animate-spin' : ''}`} />
-          <div className={`w-3 h-3 rounded-full border-2 border-slate-500 ${conv2On ? 'animate-spin' : ''}`} />
-        </div>
-        <div className="absolute bottom-0 text-[8px] text-slate-500" style={{ left: toPct((SHEAR_X + END_CONV2_X) / 2 - 10) }}>Conv 2</div>
-
-        {/* Conveyor 3 */}
-        <div 
-          className="absolute bottom-4 h-4 bg-slate-800 border-t border-slate-600 flex items-center justify-around overflow-hidden"
-          style={{ left: toPct(END_CONV2_X), right: 0 }}
-        >
-          <div className={`w-3 h-3 rounded-full border-2 border-slate-500 ${conv3On ? 'animate-spin' : ''}`} />
-          <div className={`w-3 h-3 rounded-full border-2 border-slate-500 ${conv3On ? 'animate-spin' : ''}`} />
-        </div>
-        <div className="absolute bottom-0 text-[8px] text-slate-500" style={{ left: toPct((END_CONV2_X + DROP_X) / 2 - 10) }}>Conv 3</div>
-
-        {/* The Strip */}
-        <div 
-          className="absolute bottom-8 h-2 bg-slate-300"
-          style={{ left: 0, width: toPct(uiState.stripX) }}
-        />
-
-        {/* Cut Sheets */}
-        {uiState.cutSheets.map(sheet => (
-          <div 
-            key={sheet.id}
-            className="absolute bottom-8 h-2 bg-slate-300 border-l border-slate-400"
-            style={{ left: toPct(sheet.tailX), width: toPct(sheet.headX - sheet.tailX) }}
-          />
-        ))}
-
-        {/* PROX Sensor */}
-        <div 
-          className="absolute top-10 w-2 h-8 bg-yellow-600/30 border-l border-r border-yellow-600/50"
-          style={{ left: toPct(PROX_X) }}
-        >
-           <div className={`absolute -bottom-2 -left-1 w-4 h-4 rounded-full border-2 ${uiState.sensors.PROX ? 'bg-green-400 border-green-200 shadow-[0_0_8px_#4ade80]' : 'bg-slate-700 border-slate-500'}`} />
-           <span className="absolute -top-4 -left-3 text-[8px] text-yellow-500 font-mono">PROX</span>
+      {/* 3. Operator Pushbuttons Section */}
+      <section className="hardware-section" style={{ padding: '12px 14px' }}>
+        <div className="hardware-section-heading" style={{ marginBottom: '10px' }}>
+          <h4><SlidersHorizontal size={14} />Operator pushbuttons</h4>
+          <span>INPUTS (I:0)</span>
         </div>
 
-        {/* Shear Blade */}
-        <div 
-          className="absolute top-4 bottom-8 w-2 flex flex-col items-center"
-          style={{ left: toPct(SHEAR_X) }}
-        >
-          {/* Cylinder Body */}
-          <div className="w-8 h-12 bg-slate-600 border border-slate-500 z-10 relative">
-            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] text-slate-400 font-mono whitespace-nowrap">SHEAR_CYL</span>
-          </div>
-          {/* Rod */}
-          <div 
-            className="w-2 bg-slate-400 origin-top z-0"
-            style={{ height: `${20 + (uiState.bladeY * 0.5)}%` }}
-          />
-          {/* Blade */}
-          <div className="w-10 h-6 bg-slate-300 border-b-4 border-slate-200 shadow-md relative">
-             <div className="absolute inset-x-1 bottom-0 h-2 bg-slate-100" style={{ clipPath: 'polygon(0 0, 100% 0, 50% 100%)' }} />
-          </div>
-        </div>
-
-        {/* Limit Switches UI indicator */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1.5 text-[9px] font-mono bg-slate-900/60 p-2 rounded">
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${uiState.sensors.UP_LS ? 'bg-cyan-400 shadow-[0_0_5px_#22d3ee]' : 'bg-slate-700'}`} />
-            <span className={uiState.sensors.UP_LS ? 'text-cyan-300 font-bold' : 'text-slate-500'}>UP_LS (I:0/4)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${uiState.sensors.DOWN_LS ? 'bg-cyan-400 shadow-[0_0_5px_#22d3ee]' : 'bg-slate-700'}`} />
-            <span className={uiState.sensors.DOWN_LS ? 'text-cyan-300 font-bold' : 'text-slate-500'}>DOWN_LS (I:0/3)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Control Panel (Pushbuttons) */}
-      <div className="flex justify-center gap-12 pt-2 pb-1 shrink-0 bg-[#2a2d34] rounded-xl p-2 border border-[#3c414a]">
-        <div className="flex flex-col items-center gap-2">
-          <button
-            onMouseDown={() => { setActivePress('START'); onToggleInput('I:0/0', true); }}
-            onTouchStart={() => { setActivePress('START'); onToggleInput('I:0/0', true); }}
-            className={`w-14 h-14 rounded-full border-4 shadow-xl flex items-center justify-center transition-all outline-none ${
-              activePress === 'START' || isBitOn('I:0/0')
-                ? 'bg-green-600 border-green-800 scale-95 shadow-inner'
-                : 'bg-green-500 border-green-700 hover:bg-green-400'
-            }`}
-          >
-            <span className="text-[10px] font-bold text-white uppercase tracking-wider drop-shadow-md">
-              Start
+        <div className="io-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', maxWidth: '270px', margin: '0 auto' }}>
+          {/* Start Pushbutton (I:0/0 N.O.) */}
+          <div className={`io-cell ${isStartPressed ? 'active-cell' : ''}`} style={{ '--signal': '#10b981' }}>
+            <span className="io-address">I:0/0</span>
+            <button
+              className={`momentary-control ${isStartPressed ? 'pressed' : ''}`}
+              aria-label="Start Pushbutton (N.O.)"
+              aria-pressed={isStartPressed}
+              title="START Pushbutton (I:0/0) — Normally Open. Press and hold"
+              onMouseDown={() => { setActivePress('START'); onToggleInput('I:0/0', true); }}
+              onTouchStart={() => { setActivePress('START'); onToggleInput('I:0/0', true); }}
+            >
+              <span>START</span>
+            </button>
+            <span className="io-name">Start (N.O.)</span>
+            <span className={`io-value ${isStartPressed ? 'on' : ''}`}>
+              <i />{isStartPressed ? 'Pressed' : 'Normal'}<b>{isStartPressed ? '1' : '0'}</b>
             </span>
-          </button>
-          <div className="text-center">
-            <div className="text-[10px] font-bold text-cyan-300 font-mono">I:0/0</div>
-            <div className="text-[9px] text-slate-400">START_PB (N.O.)</div>
           </div>
-        </div>
 
-        <div className="flex flex-col items-center gap-2">
-          <button
-            onMouseDown={() => { setActivePress('STOP'); onToggleInput('I:0/1', false); }}
-            onTouchStart={() => { setActivePress('STOP'); onToggleInput('I:0/1', false); }}
-            className={`w-14 h-14 rounded-full border-4 shadow-xl flex items-center justify-center transition-all outline-none ${
-              activePress === 'STOP' || !isBitOn('I:0/1')
-                ? 'bg-red-700 border-red-900 scale-95 shadow-inner'
-                : 'bg-red-600 border-red-800 hover:bg-red-500'
-            }`}
-          >
-            <span className="text-[10px] font-bold text-white uppercase tracking-wider drop-shadow-md">
-              Stop
+          {/* Stop Pushbutton (I:0/1 N.C.) */}
+          <div className={`io-cell ${isStopPressed ? 'active-cell' : ''}`} style={{ '--signal': '#ef4444' }}>
+            <span className="io-address">I:0/1</span>
+            <button
+              className={`momentary-control ${isStopPressed ? 'pressed' : ''}`}
+              aria-label="Stop Pushbutton (N.C.)"
+              aria-pressed={isStopPressed}
+              title="STOP Pushbutton (I:0/1) — Normally Closed. Press to break circuit"
+              onMouseDown={() => { setActivePress('STOP'); onToggleInput('I:0/1', false); }}
+              onTouchStart={() => { setActivePress('STOP'); onToggleInput('I:0/1', false); }}
+            >
+              <span>STOP</span>
+            </button>
+            <span className="io-name">Stop (N.C.)</span>
+            <span className={`io-value ${isStopPressed ? 'on' : ''}`}>
+              <i />{isStopPressed ? 'Pressed' : 'Normal'}<b>{isBitOn('I:0/1') ? '1' : '0'}</b>
             </span>
-          </button>
-          <div className="text-center">
-            <div className="text-[10px] font-bold text-cyan-300 font-mono">I:0/1</div>
-            <div className="text-[9px] text-slate-400">STOP_PB (N.C.)</div>
           </div>
         </div>
+      </section>
+
+      {/* 4. Live Image Table Snapshot */}
+      <div className="hardware-data">
+        <span><Activity size={14} />Live image</span>
+        <code>I:0 <b>{[0,1,2,3,4].map(i => isBitOn(`I:0/${i}`) ? 1 : 0).join('')}</b></code>
+        <code>O:0 <b>{[0,1,2,3].map(i => isBitOn(`O:0/${i}`) ? 1 : 0).join('')}</b></code>
       </div>
     </div>
   );
 }
+
+export default MetalShearSandbox;

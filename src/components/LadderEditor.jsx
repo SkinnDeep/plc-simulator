@@ -667,7 +667,7 @@ export function LadderEditor({
 
   return (
     <div className="ladder-editor bg-[#1e1e1e] border border-[#2d2d2d] overflow-hidden shadow-xl flex flex-col flex-1 focus:outline-none h-full">
-      <div className="section-heading editor-heading"><div><span className="eyebrow">PROGRAM WORKSPACE</span><h2>Ladder logic</h2></div><span className="editor-mode"><i className={isRunning ? 'on' : ''} />{isRunning ? 'Online' : 'Edit mode'}</span></div>
+      
       {/* 1. Categorized Instruction & I/O Palette */}
       <div className="relative">
         <InstructionPalette
@@ -875,17 +875,17 @@ export function LadderEditor({
               </div>
 
               {/* Rung Schematic Line */}
-              <div className="flex items-center gap-3 relative py-3 min-h-[110px]">
+              <div className="flex items-center gap-3 relative py-1.5 min-h-[76px]">
                 {/* L1 Power Rail (Left) */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className={`power-rail w-2 h-24 sm:h-28 rounded-full transition-all duration-150 ${
+                  <div className={`power-rail w-2 h-16 rounded-full transition-all duration-150 ${
                     conducting ? 'bg-emerald-400 shadow-[0_0_12px_#10b981]' : 'bg-blue-600'
                   }`} />
                   <span className="text-[10px] font-mono font-bold text-blue-400 mt-1">L1</span>
                 </div>
 
                 {/* Conductor & Instruction Wire Area */}
-                <div className="flex-1 flex items-center justify-between px-2 relative min-h-[110px] overflow-x-auto">
+                <div className="flex-1 flex items-center justify-between px-2 relative min-h-[76px] overflow-x-auto">
                   {/* Background Conductor Wire */}
                   <div className={`rung-wire absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-150 ${
                     conducting ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-slate-700'
@@ -1300,7 +1300,7 @@ export function LadderEditor({
 
                 {/* L2 Neutral Rail (Right) */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className="power-rail w-2 h-24 sm:h-28 rounded-full bg-slate-600" />
+                  <div className="power-rail w-2 h-16 rounded-full bg-slate-500" />
                   <span className="text-[10px] font-mono font-bold text-slate-500 mt-1">L2</span>
                 </div>
               </div>
@@ -1433,8 +1433,22 @@ export function LadderEditor({
 // Minimalist ISA-101 Industrial Instruction Card
 function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onDelete, symbols, onDropItem }) {
   const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
-  const color = isActive ? 'text-emerald-400' : 'text-slate-300';
-  
+  const color = isActive 
+    ? 'text-emerald-400 font-black drop-shadow-[0_0_8px_#10b981]' 
+    : isOutput 
+      ? 'text-amber-300 font-bold' 
+      : 'text-cyan-300 font-bold';
+
+  const enclosureClass = isActive
+    ? 'border-emerald-500/60 bg-emerald-950/40 shadow-[0_0_12px_rgba(16,185,129,0.22)]'
+    : isSelected
+      ? isOutput
+        ? 'border-amber-400 bg-amber-950/40 ring-2 ring-amber-400/50'
+        : 'border-cyan-400 bg-cyan-950/40 ring-2 ring-cyan-400/50'
+      : isOutput
+        ? 'border-amber-500/30 bg-amber-500/[0.04] hover:border-amber-400/60 hover:bg-amber-500/[0.08]'
+        : 'border-cyan-500/30 bg-cyan-500/[0.04] hover:border-cyan-400/60 hover:bg-cyan-500/[0.08]';
+
   return (
     <div
       draggable
@@ -1449,15 +1463,17 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         if (onDropItem) onDropItem(e); 
       }}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      className="flex flex-col items-center justify-center relative select-none group px-2 py-1 cursor-pointer hover:bg-slate-800/40 rounded transition-colors"
+      className={`instruction-card border rounded-lg flex flex-col items-center justify-center relative select-none group px-2 py-1 cursor-pointer transition-all ${enclosureClass}`}
     >
       {/* Label above - Explicit Dropdown Button */}
       <button 
         onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
         className={`flex flex-col items-center gap-0.5 text-[10px] font-mono mb-1 px-1.5 py-0.5 rounded border transition-colors ${
           isActive 
-            ? 'bg-emerald-900/40 border-emerald-500/50 text-emerald-300 hover:bg-emerald-800/60' 
-            : 'bg-[#2a2d34] border-slate-600/50 text-slate-300 hover:bg-[#343842] hover:border-cyan-500/50 hover:text-cyan-300'
+            ? 'bg-emerald-900/60 border-emerald-400/70 text-emerald-200' 
+            : isOutput
+              ? 'bg-amber-950/60 border-amber-500/40 text-amber-200 hover:bg-amber-900/70'
+              : 'bg-cyan-950/60 border-cyan-500/40 text-cyan-200 hover:bg-cyan-900/70'
         }`}
         title="Click to assign I/O address"
       >
@@ -1466,14 +1482,14 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
           <ChevronDown className="w-3 h-3 opacity-70" />
         </div>
         {symbols?.[item.operand] && (
-          <span className="text-[10px] text-slate-400 font-bold px-1 whitespace-nowrap overflow-hidden max-w-[80px] text-ellipsis leading-tight">
+          <span className="text-[10px] text-slate-300 font-bold px-1 whitespace-nowrap overflow-hidden max-w-[80px] text-ellipsis leading-tight">
             {symbols[item.operand]}
           </span>
         )}
       </button>
 
       {/* Symbol */}
-      <div className={`text-base font-mono font-bold tracking-widest leading-none ${color} ${isSelected ? 'ring-1 ring-cyan-500 px-1 rounded bg-[#2a2a2a]' : ''}`}>
+      <div className={`text-base font-mono tracking-widest leading-none ${color} ${isSelected ? 'px-1 rounded bg-black/40' : ''}`}>
         {item.type === 'XIC' && '-] [-'}
         {item.type === 'XIO' && '-[/]-'}
         {item.type === 'OTE' && '-( )-'}
@@ -1525,7 +1541,7 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
         if (onDropItem) onDropItem(e); 
       }}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      className={`flex flex-col border-2 ${borderColor} rounded overflow-hidden select-none relative cursor-pointer min-w-[140px] shadow-md mx-2 ${isSelected ? 'ring-2 ring-cyan-500' : ''}`}
+      className={`flex flex-col border-2 ${isActive ? 'border-emerald-500/60 bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]' : 'border-purple-500/40 bg-purple-950/20 shadow-md'} rounded overflow-hidden select-none relative cursor-pointer min-w-[140px] mx-2 ${isSelected ? 'ring-2 ring-purple-400' : ''}`}
     >
       <div className={`${bgHeader} px-2 py-1 border-b ${borderColor} flex justify-between items-center`}>
         <span className={`text-[10px] font-bold ${color}`}>TON</span>
@@ -1661,7 +1677,7 @@ function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, o
         if (onDropItem) onDropItem(e); 
       }}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      className={`flex flex-col border-2 ${borderColor} rounded overflow-hidden select-none relative cursor-pointer min-w-[130px] shadow-md mx-2 ${isSelected ? 'ring-2 ring-cyan-500' : ''}`}
+      className={`flex flex-col border-2 ${isActive ? 'border-emerald-500/60 bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]' : 'border-teal-500/40 bg-teal-950/20 shadow-md'} rounded overflow-hidden select-none relative cursor-pointer min-w-[130px] mx-2 ${isSelected ? 'ring-2 ring-teal-400' : ''}`}
     >
       <div className={`${bgHeader} px-2 py-1 border-b ${borderColor} flex justify-between items-center`}>
         <span className={`text-[10px] font-bold ${color}`}>{item.type}</span>

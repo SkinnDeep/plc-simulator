@@ -340,8 +340,7 @@ export function App() {
               <div className={`bench-column w-full lg:w-[380px] shrink-0 flex-col overflow-y-auto min-h-0 pr-1 ${
                 mobileView === 'bench' ? 'flex flex-1' : 'hidden lg:flex'
               }`}>
-                <div className="section-heading"><div><span className="eyebrow">I/O WORKSPACE</span><h2>Hardware bench</h2></div><SlidersHorizontal size={19} /></div>
-                <div className="bench-switch flex bg-slate-900 border border-slate-700 rounded-lg p-1 mb-2">
+                                <div className="bench-switch flex bg-slate-900 border border-slate-700 rounded-lg p-1 mb-2">
                   <button
                     aria-pressed={activeSandbox === 'HardwareTrainer'} onClick={() => setActiveSandbox('HardwareTrainer')}
                     className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${activeSandbox === 'HardwareTrainer' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}

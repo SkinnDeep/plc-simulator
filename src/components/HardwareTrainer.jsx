@@ -2,10 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { Cpu, CircleDot, SlidersHorizontal, Activity } from 'lucide-react';
 
 const LAMPS = [
-  { addr: 'O:0/0', name: 'Amber', color: '#eab567' },
-  { addr: 'O:0/1', name: 'Blue', color: '#79b8f3' },
-  { addr: 'O:0/2', name: 'Green', color: '#62cfa1' },
-  { addr: 'O:0/3', name: 'Red', color: '#ec7d86' },
+  { addr: 'O:0/0', name: 'Amber', color: '#f59e0b' },
+  { addr: 'O:0/1', name: 'Blue', color: '#06b6d4' },
+  { addr: 'O:0/2', name: 'Green', color: '#10b981' },
+  { addr: 'O:0/3', name: 'Red', color: '#ef4444' },
 ];
 
 export function HardwareTrainer({ plcData, onToggleInput, isRunning, symbols }) {
@@ -50,7 +50,7 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning, symbols }) 
         <div className="io-grid">
           {LAMPS.map(lamp => {
             const active = isBitOn(lamp.addr);
-            return <div key={lamp.addr} className="io-cell" role="img" aria-label={`${lamp.name} lamp ${lamp.addr}: ${active ? 'on' : 'off'}`} style={{'--signal':lamp.color}}>
+            return <div key={lamp.addr} className={`io-cell ${active ? 'active-cell' : ''}`} role="img" aria-label={`${lamp.name} lamp ${lamp.addr}: ${active ? 'on' : 'off'}`} style={{'--signal':lamp.color}}>
               <span className="io-address">{lamp.addr}</span>
               <div className={`pilot-lamp ${active ? 'lit' : ''}`}><span /></div>
               <span className="io-name" title={symbols?.[lamp.addr]}>{lamp.name}</span>
@@ -65,14 +65,14 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning, symbols }) 
           {[0,1].map(index => {
             const addr = `I:0/${index}`;
             const active = isBitOn(addr);
-            return <div className="io-cell" key={addr}>
+            return <div className={`io-cell ${active ? 'active-cell' : ''}`} key={addr} style={{ '--signal': active ? '#10b981' : '#64748b' }}>
               <span className="io-address">{addr}</span>
               <button className="switch-control" aria-label={`Switch ${index + 1}`} aria-pressed={active} onClick={() => onToggleInput(addr, !active)} title={`Toggle Switch ${index + 1} (${addr})`}><span className="switch-track"><span /></span></button>
               <span className="io-name">Switch {index + 1}</span>
               <span className={`io-value ${active ? 'on' : ''}`}><i />{active ? 'On' : 'Off'}<b>{active ? '1' : '0'}</b></span>
             </div>;
           })}
-          {[{addr:'I:0/2', label:'Start', name:'Green start pushbutton', color:'#62cfa1'}, {addr:'I:0/3', label:'Stop', name:'Red stop pushbutton', color:'#ec7d86'}].map(pb => <div className="io-cell" key={pb.addr} style={{'--signal':pb.color}}>
+          {[{addr:'I:0/2', label:'Start', name:'Green start pushbutton', color:'#10b981'}, {addr:'I:0/3', label:'Stop', name:'Red stop pushbutton', color:'#ef4444'}].map(pb => <div className={`io-cell ${isBitOn(pb.addr) ? 'active-cell' : ''}`} key={pb.addr} style={{'--signal':pb.color}}>
             <span className="io-address">{pb.addr}</span>
             <button className="momentary-control" aria-label={pb.name} aria-pressed={isBitOn(pb.addr)} title={`${pb.label} (${pb.addr}) — press and hold`}
               onPointerDown={e => { if (e.button !== 0) return; e.currentTarget.setPointerCapture(e.pointerId); press(pb.addr); }}
