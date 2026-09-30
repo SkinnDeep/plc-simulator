@@ -262,7 +262,7 @@ export function App() {
   };
 
   return (
-    <div className={`app-shell flex flex-col h-screen w-full bg-slate-950 bg-grid-pattern text-slate-100 overflow-hidden font-sans ${theme === 'light' ? 'light-mode' : ''}`}>
+    <div className={`app-shell flex flex-col fixed inset-0 bg-slate-950 bg-grid-pattern text-slate-100 overflow-hidden font-sans ${theme === 'light' ? 'light-mode' : ''}`}>
       {/* 1. Header Toolbar */}
       <Header
         isRunning={isRunning}
