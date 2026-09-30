@@ -667,9 +667,11 @@ export function LadderEditor({
 
   return (
     <div className="ladder-editor bg-[#1e1e1e] border border-[#2d2d2d] overflow-hidden shadow-xl flex flex-col flex-1 focus:outline-none h-full">
+      <div className="section-heading editor-heading"><div><span className="eyebrow">PROGRAM WORKSPACE</span><h2>Ladder logic</h2></div><span className="editor-mode"><i className={isRunning ? 'on' : ''} />{isRunning ? 'Online' : 'Edit mode'}</span></div>
       {/* 1. Categorized Instruction & I/O Palette */}
       <div className="relative">
         <InstructionPalette
+          disabled={isRunning}
           onAddInstruction={(type) => handleAddInstructionToRung(selectedRungIdx, type)}
           isBranchMode={isBranchMode}
           onToggleBranchMode={() => {
@@ -704,7 +706,7 @@ export function LadderEditor({
       <div className="editor-toolbar bg-slate-950/80 border-b border-slate-800 px-4 py-2.5 flex flex-wrap gap-3 items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-xs font-mono font-bold text-slate-200 uppercase tracking-wide">
-            Ladder Logic Canvas
+            Main routine
           </span>
           <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
             {rungs.length} {rungs.length === 1 ? 'Rung' : 'Rungs'}
@@ -795,13 +797,13 @@ export function LadderEditor({
       {/* 3. Ladder Rungs Canvas Container */}
       <div id="tour-rungs" className={`flex-1 p-4 overflow-y-auto space-y-4 transition-all relative ${isRunning ? 'bg-slate-900/90 grayscale-[0.3]' : 'bg-slate-950/60'}`}>
         {isRunning && (
-          <div className="sticky top-0 z-50 flex justify-center mb-4">
+          <div className="running-notice sticky top-0 z-50 flex justify-center mb-4">
             <button 
               onClick={onStop}
               className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)] flex items-center gap-2 cursor-pointer transition-colors"
             >
               <span className="w-2 h-2 rounded-full bg-slate-950 animate-pulse" />
-              PROGRAM IS RUNNING - CLICK HERE TO STOP
+              Program is running · Click to stop
             </button>
           </div>
         )}
@@ -819,7 +821,7 @@ export function LadderEditor({
             <div
               key={rung.id}
               onClick={() => { setSelectedRungIdx(rIdx); setSelectedItemId(null); }}
-              className={`ladder-rung rounded-2xl border-2 p-3.5 transition-all cursor-pointer ${
+              data-selected={isRungSelected} data-conducting={conducting} className={`ladder-rung rounded-2xl border-2 p-3.5 transition-all cursor-pointer ${
                 isRungSelected
                   ? 'border-cyan-500/80 bg-slate-900 shadow-[0_0_20px_rgba(6,182,212,0.15)]'
                   : conducting
@@ -828,9 +830,9 @@ export function LadderEditor({
               }`}
             >
               {/* Rung Header */}
-              <div className="flex items-center justify-between text-xs pb-2 mb-3 border-b border-slate-800/80">
+              <div className="rung-heading flex items-center justify-between text-xs pb-2 mb-3 border-b border-slate-800/80">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold text-[11px] ${
+                  <span className={`rung-index px-2.5 py-0.5 rounded-full font-mono font-bold text-[11px] ${
                     isRungSelected
                       ? 'bg-cyan-500 text-slate-950'
                       : conducting
@@ -876,7 +878,7 @@ export function LadderEditor({
               <div className="flex items-center gap-3 relative py-3 min-h-[110px]">
                 {/* L1 Power Rail (Left) */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className={`w-2 h-24 sm:h-28 rounded-full transition-all duration-150 ${
+                  <div className={`power-rail w-2 h-24 sm:h-28 rounded-full transition-all duration-150 ${
                     conducting ? 'bg-emerald-400 shadow-[0_0_12px_#10b981]' : 'bg-blue-600'
                   }`} />
                   <span className="text-[10px] font-mono font-bold text-blue-400 mt-1">L1</span>
@@ -885,7 +887,7 @@ export function LadderEditor({
                 {/* Conductor & Instruction Wire Area */}
                 <div className="flex-1 flex items-center justify-between px-2 relative min-h-[110px] overflow-x-auto">
                   {/* Background Conductor Wire */}
-                  <div className={`absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-150 ${
+                  <div className={`rung-wire absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-150 ${
                     conducting ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' : 'bg-slate-700'
                   }`} />
 
@@ -1064,7 +1066,7 @@ export function LadderEditor({
                       onDragLeave={() => setDragOverTarget(null)}
                       onDrop={(e) => handleDropOnRungZone(e, rIdx, 'input')}
                       onClick={() => handleAddInstructionToRung(rIdx, 'XIC')}
-                      className={`px-3 py-2.5 rounded-xl border-2 border-dashed transition-all flex items-center gap-1.5 text-xs font-mono cursor-pointer ${
+                      className={`add-instruction px-3 py-2.5 rounded-xl border-2 border-dashed transition-all flex items-center gap-1.5 text-xs font-mono cursor-pointer ${
                         dragOverTarget === `zone_${rIdx}_in`
                           ? 'border-cyan-400 bg-cyan-950/60 text-cyan-300 ring-2 ring-cyan-400'
                           : 'border-slate-700 bg-slate-900/60 hover:border-cyan-400 text-slate-400 hover:text-cyan-300'
@@ -1298,7 +1300,7 @@ export function LadderEditor({
 
                 {/* L2 Neutral Rail (Right) */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className="w-2 h-24 sm:h-28 rounded-full bg-slate-600" />
+                  <div className="power-rail w-2 h-24 sm:h-28 rounded-full bg-slate-600" />
                   <span className="text-[10px] font-mono font-bold text-slate-500 mt-1">L2</span>
                 </div>
               </div>
@@ -1309,7 +1311,7 @@ export function LadderEditor({
         {/* Full-width Add Rung button at bottom */}
         <button
           onClick={handleAddRung}
-          className="w-full py-3.5 rounded-2xl border-2 border-dashed border-slate-700 hover:border-cyan-400 bg-slate-900/40 hover:bg-slate-900/80 text-slate-400 hover:text-cyan-300 font-mono text-xs flex items-center justify-center gap-2 transition group cursor-pointer"
+          className="add-rung-placeholder w-full py-3.5 rounded-2xl border-2 border-dashed border-slate-700 hover:border-cyan-400 bg-slate-900/40 hover:bg-slate-900/80 text-slate-400 hover:text-cyan-300 font-mono text-xs flex items-center justify-center gap-2 transition group cursor-pointer"
         >
           <Plus className="w-4 h-4 group-hover:scale-125 transition-transform text-cyan-400" />
           <span className="font-bold">+ Add New Ladder Rung</span>

@@ -301,9 +301,9 @@ export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
   const currentChallenge = CHALLENGES[selectedChallengeIdx];
 
   return (
-    <div className="flex flex-col bg-slate-900 border-2 border-slate-700 rounded-xl overflow-hidden shadow-2xl flex-1 select-none">
+    <div className="learning-workspace flex flex-col bg-slate-900 border-2 border-slate-700 rounded-xl overflow-hidden shadow-2xl flex-1 select-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-slate-950 border-b border-slate-800">
+      <div className="learning-header flex items-center justify-between px-4 py-2.5 bg-slate-950 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-cyan-400" />
           <h2 className="text-sm font-bold text-white uppercase tracking-wide">
@@ -313,7 +313,7 @@ export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
 
         <div className="flex bg-slate-900 rounded-lg p-0.5 border border-slate-800 text-xs font-semibold">
           <button
-            onClick={() => setActiveModule('lessons')}
+            aria-pressed={activeModule === 'lessons'} onClick={() => setActiveModule('lessons')}
             className={`px-3 py-1 rounded transition ${
               activeModule === 'lessons' ? 'bg-cyan-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
             }`}
@@ -321,7 +321,7 @@ export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
             Slide Lessons
           </button>
           <button
-            onClick={() => setActiveModule('challenges')}
+            aria-pressed={activeModule === 'challenges'} onClick={() => setActiveModule('challenges')}
             className={`px-3 py-1 rounded transition ${
               activeModule === 'challenges' ? 'bg-cyan-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
             }`}
@@ -336,13 +336,14 @@ export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
         {activeModule === 'lessons' && (
           <>
             {/* Sidebar */}
-            <div className="w-full md:w-64 bg-slate-950/60 border-r border-slate-800 p-2.5 space-y-1.5 overflow-y-auto">
+            <div className="learning-sidebar w-full md:w-64 bg-slate-950/60 border-r border-slate-800 p-2.5 space-y-1.5 overflow-y-auto">
               {LESSONS.map(l => {
                 const Icon = l.icon;
                 const isSelected = selectedLessonId === l.id;
                 return (
                   <button
                     key={l.id}
+                    aria-pressed={isSelected}
                     onClick={() => setSelectedLessonId(l.id)}
                     className={`w-full text-left p-2.5 rounded-lg border transition flex items-start gap-2.5 ${
                       isSelected
@@ -361,7 +362,7 @@ export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
             </div>
 
             {/* Lesson Body */}
-            <div className="flex-1 p-5 overflow-y-auto max-h-[580px]">
+            <div className="learning-content flex-1 p-5 overflow-y-auto max-h-[580px]">
               {LESSONS.find(l => l.id === selectedLessonId)?.content}
             </div>
           </>
@@ -369,13 +370,14 @@ export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
 
         {activeModule === 'challenges' && (
           <>
-            <div className="w-full md:w-64 bg-slate-950/60 border-r border-slate-800 p-2.5 space-y-1.5 overflow-y-auto">
+            <div className="learning-sidebar w-full md:w-64 bg-slate-950/60 border-r border-slate-800 p-2.5 space-y-1.5 overflow-y-auto">
               <span className="text-[10px] font-bold uppercase text-slate-500 block px-1 mb-1">
                 Progressive Challenges
               </span>
               {CHALLENGES.map((ch, idx) => (
                 <button
                   key={ch.id}
+                  aria-pressed={selectedChallengeIdx === idx}
                   onClick={() => setSelectedChallengeIdx(idx)}
                   className={`w-full text-left p-2.5 rounded-lg border transition ${
                     selectedChallengeIdx === idx
@@ -389,7 +391,7 @@ export function LearningTab({ onLoadProgram, onApplyChallengeSolution }) {
               ))}
             </div>
 
-            <div className="flex-1 p-5 overflow-y-auto space-y-4 max-h-[580px]">
+            <div className="learning-content flex-1 p-5 overflow-y-auto space-y-4 max-h-[580px]">
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
                 <h3 className="text-base font-bold text-white mb-2">{currentChallenge.title}</h3>
                 <p className="text-sm text-slate-300 mb-4">{currentChallenge.prompt}</p>

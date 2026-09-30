@@ -11,7 +11,7 @@ import { LearningTab } from './components/LearningTab';
 import { SpotlightTour } from './components/SpotlightTour';
 import { BitMonitorDrawer } from './components/BitMonitorDrawer';
 import { validateLadderLogic } from './engine/plcValidator';
-import { Check, AlertTriangle } from 'lucide-react';
+import { Check, AlertTriangle, Workflow, SlidersHorizontal } from 'lucide-react';
 
 const INITIAL_BLANK_RUNGS = [
   {
@@ -300,14 +300,14 @@ export function App() {
 
       {/* Program Loaded Notification Banner */}
       {loadNotice && (
-        <div role="status" className="bg-emerald-500 text-slate-950 font-bold text-xs py-1.5 px-4 flex items-center justify-center gap-2 shadow-md">
+        <div role="status" className="load-notice">
           <Check className="w-4 h-4 stroke-[3]" />
           <span>{loadNotice}</span>
         </div>
       )}
 
       {/* 2. Main View Area */}
-      <div className="flex-1 flex flex-col p-2 sm:p-3 overflow-hidden min-h-0">
+      <div className="workspace-main flex-1 flex flex-col overflow-hidden min-h-0">
         {activeMainTab === 'simulator' && (
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             {/* Mobile Sub-View Segmented Switch (visible on screens < lg) */}
@@ -320,7 +320,7 @@ export function App() {
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <span>🪜 Ladder Logic Canvas</span>
+                <Workflow size={15} /><span>Ladder logic</span>
               </button>
               <button
                 aria-pressed={mobileView === 'bench'} onClick={() => setMobileView('bench')}
@@ -330,28 +330,29 @@ export function App() {
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <span>🎛️ Hardware Bench</span>
+                <SlidersHorizontal size={15} /><span>Hardware bench</span>
               </button>
             </div>
 
             {/* Desktop side-by-side or Mobile toggled views */}
-            <div className="flex-1 flex flex-col lg:flex-row gap-3 overflow-hidden min-h-0">
+            <div className="workspace-columns flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
               {/* Left: Hardware Trainer */}
-              <div className={`w-full lg:w-[380px] shrink-0 flex-col overflow-y-auto min-h-0 pr-1 ${
+              <div className={`bench-column w-full lg:w-[380px] shrink-0 flex-col overflow-y-auto min-h-0 pr-1 ${
                 mobileView === 'bench' ? 'flex flex-1' : 'hidden lg:flex'
               }`}>
+                <div className="section-heading"><div><span className="eyebrow">I/O WORKSPACE</span><h2>Hardware bench</h2></div><SlidersHorizontal size={19} /></div>
                 <div className="bench-switch flex bg-slate-900 border border-slate-700 rounded-lg p-1 mb-2">
                   <button
                     aria-pressed={activeSandbox === 'HardwareTrainer'} onClick={() => setActiveSandbox('HardwareTrainer')}
                     className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${activeSandbox === 'HardwareTrainer' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
                   >
-                    PLC 1: Lights & Switches
+                    Lights & switches
                   </button>
                   <button
                     aria-pressed={activeSandbox === 'MetalShear'} onClick={() => setActiveSandbox('MetalShear')}
                     className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${activeSandbox === 'MetalShear' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
                   >
-                    PLC 2: Metal Shear
+                    Metal shear
                   </button>
                 </div>
                 {activeSandbox === 'HardwareTrainer' ? (

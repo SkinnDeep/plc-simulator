@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Sparkles, Move, GitFork } from 'lucide-react';
+
 
 export function InstructionPalette({
+  disabled = false,
   onAddInstruction,
   isBranchMode,
   onToggleBranchMode,
@@ -10,7 +11,7 @@ export function InstructionPalette({
 }) {
   const [activeCategory, setActiveCategory] = useState('Bit');
 
-  const categories = ['Bit', 'Timer/Counter', 'Math', 'Move/Logical', 'Compare'];
+  const categories = ['Bit', 'Timers', 'Math', 'Move / logic', 'Compare'];
 
   const bitIcons = [
     { type: 'BRANCH', symbol: '┼──┼', name: 'Branch', isBranch: true },
@@ -50,31 +51,32 @@ export function InstructionPalette({
   };
 
   const renderIcons = (icons) => (
-    <div className="flex items-center gap-1">
+    <div className="instruction-buttons">
       {icons.map(inst => (
         <button
           key={inst.type}
+          disabled={disabled}
           aria-label={inst.name}
-          draggable={!inst.isBranch}
+          draggable={!disabled && !inst.isBranch}
           onDragStart={(e) => !inst.isBranch && handleDragStart(e, { kind: 'instruction', type: inst.type, isOutput: inst.isOutput })}
           onClick={() => inst.isBranch ? onToggleBranchMode() : onAddInstruction(inst.type)}
-          className={`flex flex-col items-center justify-center min-w-[36px] h-[32px] rounded border font-mono text-xs cursor-pointer shadow-sm transition active:scale-95 group px-1 ${
+          className={`instruction-button ${
             inst.isBranch && isBranchMode
               ? 'bg-blue-500/20 border-blue-400 text-blue-300'
               : 'bg-transparent border-transparent hover:bg-[#2d2d2d] text-slate-300 hover:text-white'
           }`}
           title={inst.name}
         >
-          <span className={`font-semibold ${inst.isBranch && isBranchMode ? 'text-blue-400' : ''}`}>{inst.symbol}</span>
+          <span className="instruction-symbol">{inst.symbol}</span><span className="instruction-name">{inst.type === 'BRANCH' ? 'Branch' : inst.type}</span>
         </button>
       ))}
     </div>
   );
 
   return (
-    <div id="tour-palette" className="bg-[#1e1e1e] border-b border-[#2d2d2d] flex flex-col select-none shadow-sm">
+    <div id="tour-palette" className="instruction-palette">
       {/* Category Tabs (Matches Picture) */}
-      <div className="flex items-center gap-4 px-3 pt-2 pb-1 overflow-x-auto text-sm font-medium">
+      <div className="palette-tabs">
         {categories.map(cat => (
           <button
             key={cat}
@@ -92,12 +94,12 @@ export function InstructionPalette({
       </div>
 
       {/* Item Strip */}
-      <div className="flex items-center gap-1 overflow-x-auto px-2 py-1.5 min-h-[44px] bg-[#1a1a1a]">
+      <div className="palette-strip">
         {activeCategory === 'Bit' && renderIcons(bitIcons)}
-        {activeCategory === 'Timer/Counter' && renderIcons(timerIcons)}
+        {activeCategory === 'Timers' && renderIcons(timerIcons)}
         {activeCategory === 'Math' && renderIcons(mathIcons)}
         {activeCategory === 'Compare' && renderIcons(compareIcons)}
-        {activeCategory === 'Move/Logical' && renderIcons(moveIcons)}
+        {activeCategory === 'Move / logic' && renderIcons(moveIcons)}
       </div>
     </div>
   );
