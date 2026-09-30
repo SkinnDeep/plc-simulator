@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Play, Square, RotateCcw, Cpu, GraduationCap, HelpCircle, CheckCircle2, AlertTriangle, Database, Undo2, Redo2 } from 'lucide-react';
+import { Activity, Play, Square, RotateCcw, Cpu, GraduationCap, HelpCircle, CheckCircle2, AlertTriangle, Database, Undo2, Redo2, Sun, Moon } from 'lucide-react';
 import { SAMPLE_PROGRAMS } from '../data/samplePrograms';
 
 export function Header({
@@ -23,7 +23,7 @@ export function Header({
   onToggleTheme
 }) {
   return (
-    <div className="flex flex-col shadow-xl select-none z-50">
+    <div className="header-stack flex flex-col select-none z-50 shrink-0">
       {/* Top Header Row (Brand & Global Nav) */}
       <header className={`app-header bg-[#1e1e1e] border-b border-[#2d2d2d] text-slate-100 px-3 sm:px-4 py-2.5 flex items-center justify-between gap-4 ${isRunning ? 'border-t-4 border-t-emerald-500' : 'border-t-4 border-t-slate-700'}`}>
         {/* Brand & Processor Status */}
@@ -43,13 +43,13 @@ export function Header({
         </div>
 
         {/* Global Controls & Tabs */}
-        <div className="flex items-center gap-1.5 sm:gap-2 justify-end shrink-0 whitespace-nowrap">
+        <div className="header-navigation flex items-center gap-1.5 sm:gap-2 justify-end shrink-0 whitespace-nowrap">
           <button
             onClick={onToggleTheme}
             className="flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-semibold transition cursor-pointer"
-            title="Toggle Dark/Light Mode"
+            title="Toggle Dark/Light Mode" aria-label={theme === 'dark' ? 'Switch to light appearance' : 'Switch to dark appearance'}
           >
-            {theme === 'dark' ? '☀️' : '🌙'}
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
           <a
@@ -57,7 +57,7 @@ export function Header({
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-lg bg-red-900/40 hover:bg-red-800/60 text-red-300 border border-red-700/50 text-xs font-semibold transition cursor-pointer"
-            title="Found a bug? Report it on GitHub!"
+            title="Found a bug? Report it on GitHub!" aria-label="Report a bug on GitHub"
           >
             <AlertTriangle className="w-4 h-4 text-red-400" />
             
@@ -66,7 +66,7 @@ export function Header({
           <button
             onClick={onOpenHelp}
             className="flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 text-xs font-semibold transition cursor-pointer"
-            title="Open Simulator Tutorial & Guide"
+            title="Open Simulator Tutorial & Guide" aria-label="Open simulator guide"
           >
             <HelpCircle className="w-4 h-4 text-cyan-400" />
             
@@ -101,25 +101,25 @@ export function Header({
       </header>
 
       {/* Bottom Toolbar Row (Simulator Controls) */}
-      <div className="bg-[#15161a] border-b-2 border-[#2d2d2d] px-3 sm:px-4 py-2 flex items-center justify-between gap-3 overflow-x-auto">
+      <div className="execution-toolbar bg-[#15161a] border-b-2 border-[#2d2d2d] px-3 sm:px-4 py-2 flex items-center justify-between gap-3 overflow-x-auto">
         <div id="tour-controls" role="group" aria-label="Program controls" className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
             <button
-              aria-label={isRunning ? 'Stop PLC' : 'Run PLC'} aria-pressed={isRunning} onClick={onToggleRun}
+              title={isRunning ? 'Stop PLC execution' : 'Run PLC program'} aria-label={isRunning ? 'Stop PLC' : 'Run PLC'} aria-pressed={isRunning} onClick={onToggleRun}
               className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold transition cursor-pointer ${
                 isRunning
                   ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
                   : 'text-emerald-400 hover:text-emerald-300 hover:bg-slate-700'
               }`}
             >
-              <Play className={`w-4 h-4 ${isRunning ? 'fill-current' : ''}`} />
-              <span>RUN</span>
+              {isRunning ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4" />}
+              <span>{isRunning ? 'Stop' : 'Run'}</span>
             </button>
 
             <div className="w-[1px] h-4 bg-slate-700" />
 
             <button
-              aria-label="Reset logic" onClick={onResetMemory}
+              title="Reset all lamps, coils, and timers to 0" aria-label="Reset logic" onClick={onResetMemory}
               className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
@@ -144,7 +144,7 @@ export function Header({
           </div>
 
           <button
-            onClick={onToggleBitMonitor}
+            aria-controls="bit-monitor" aria-expanded={isBitMonitorOpen} onClick={onToggleBitMonitor}
             className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg border text-xs font-bold transition cursor-pointer ${
               isBitMonitorOpen
                 ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
@@ -210,6 +210,7 @@ export function Header({
           </div>
         </div>
       </div>
+      {showRunHint && <div role="status" className="run-hint">Press Run to see your logic respond to the inputs.</div>}
     </div>
   );
 }

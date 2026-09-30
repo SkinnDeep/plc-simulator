@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { parseProgramFile } from './engine/programFile';
 import { PLCEngine } from './engine/plcEngine';
 import { createInitialDataModel } from './types/plcTypes';
 import { SAMPLE_PROGRAMS } from './data/samplePrograms';
@@ -27,7 +28,7 @@ export function App() {
   const [symbols, setSymbols] = useState(() => {
     try {
       const saved = localStorage.getItem('plcSymbols');
-      if (saved) return JSON.parse(saved);
+      if (saved) { const parsed = JSON.parse(saved); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.values(parsed).every(value => typeof value === 'string')) return parsed; }
     } catch {}
     return {
       'I:0/0': 'Switch 1',
@@ -56,7 +57,7 @@ export function App() {
     try {
       const savedRungs = localStorage.getItem('plcRungs');
       if (savedRungs) {
-        const parsed = JSON.parse(savedRungs);
+        const parsed = parseProgramFile(savedRungs);
         if (Array.isArray(parsed) && parsed.length > 0) return [parsed];
       }
     } catch {}
@@ -120,7 +121,7 @@ export function App() {
   const [hasAttemptedRun, setHasAttemptedRun] = useState(false);
 
   // Real-time ladder logic error validation
-  const logicIssues = validateLadderLogic(currentRungs, hasAttemptedRun);
+  const logicIssues = useMemo(() => validateLadderLogic(currentRungs, hasAttemptedRun), [currentRungs, hasAttemptedRun]);
   const hasErrors = logicIssues.some(i => i.severity === 'error');
 
   // Check first-time tutorial
@@ -163,12 +164,22 @@ export function App() {
     };
   }, [engine, isRunning]);
 
+  const noticeTimer = useRef(null);
+  const hintTimer = useRef(null);
+  useEffect(() => () => {
+    clearTimeout(noticeTimer.current);
+    clearTimeout(hintTimer.current);
+  }, []);
+
   const showBanner = (msg) => {
+    clearTimeout(noticeTimer.current);
     setLoadNotice(msg);
-    setTimeout(() => setLoadNotice(null), 3000);
+    noticeTimer.current = setTimeout(() => setLoadNotice(null), 3000);
   };
 
   const handleResetMemory = () => {
+    setLoadNotice(null);
+    setShowRunHint(false);
     engine.stop();
     setIsRunning(false);
     const fresh = createInitialDataModel();
@@ -180,6 +191,7 @@ export function App() {
   };
 
   const handleToggleRun = () => {
+    setShowRunHint(false);
     if (isRunning) {
       handleResetMemory();
     } else {
@@ -196,8 +208,9 @@ export function App() {
   const [showRunHint, setShowRunHint] = useState(false);
 
   const triggerRunHint = () => {
+    clearTimeout(hintTimer.current);
     setShowRunHint(true);
-    setTimeout(() => setShowRunHint(false), 2000);
+    hintTimer.current = setTimeout(() => setShowRunHint(false), 2000);
   };
 
   const handleToggleInput = (address, val) => {
@@ -242,7 +255,7 @@ export function App() {
         setActiveMainTab('simulator');
       }
 
-      showBanner(`Loaded "${prog.name}" into Simulator - Ready to Run!`);
+      showBanner(`Loaded "${prog.name}" — simulation running.`);
     }
   };
 
@@ -258,7 +271,7 @@ export function App() {
       setActiveMainTab('simulator');
     }
 
-    showBanner("Loaded Challenge Logic into Simulator - Ready to Run!");
+    showBanner("Challenge logic loaded — simulation running.");
   };
 
   return (
@@ -276,7 +289,7 @@ export function App() {
         onChangeMainTab={setActiveMainTab}
         onSelectSampleProgram={handleSelectSampleProgram}
         onOpenHelp={() => setIsHelpOpen(true)}
-        showRunHint={showRunHint}
+        showRunHint={showRunHint && !isRunning}
         hasErrors={hasErrors}
         logicIssues={logicIssues}
         isBitMonitorOpen={isBitMonitorOpen}
@@ -298,7 +311,7 @@ export function App() {
         {activeMainTab === 'simulator' && (
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             {/* Mobile Sub-View Segmented Switch (visible on screens < lg) */}
-            <div className="flex lg:hidden bg-slate-900 border border-slate-800 rounded-xl p-1 mb-2 font-bold text-xs shrink-0 shadow-sm">
+            <div className="mobile-view-switch flex lg:hidden bg-slate-900 border border-slate-800 rounded-xl p-1 mb-2 font-bold text-xs shrink-0 shadow-sm">
               <button
                 aria-pressed={mobileView === 'ladder'} onClick={() => setMobileView('ladder')}
                 className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer ${
@@ -327,15 +340,15 @@ export function App() {
               <div className={`w-full lg:w-[380px] shrink-0 flex-col overflow-y-auto min-h-0 pr-1 ${
                 mobileView === 'bench' ? 'flex flex-1' : 'hidden lg:flex'
               }`}>
-                <div className="flex bg-slate-900 border border-slate-700 rounded-lg p-1 mb-2">
+                <div className="bench-switch flex bg-slate-900 border border-slate-700 rounded-lg p-1 mb-2">
                   <button
-                    onClick={() => setActiveSandbox('HardwareTrainer')}
+                    aria-pressed={activeSandbox === 'HardwareTrainer'} onClick={() => setActiveSandbox('HardwareTrainer')}
                     className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${activeSandbox === 'HardwareTrainer' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     PLC 1: Lights & Switches
                   </button>
                   <button
-                    onClick={() => setActiveSandbox('MetalShear')}
+                    aria-pressed={activeSandbox === 'MetalShear'} onClick={() => setActiveSandbox('MetalShear')}
                     className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${activeSandbox === 'MetalShear' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
                   >
                     PLC 2: Metal Shear

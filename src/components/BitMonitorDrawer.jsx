@@ -139,9 +139,8 @@ export function BitMonitorDrawer({
 
   return (
     <aside
-      aria-label="PLC Data Table and Bit Monitor"
       ref={drawerRef} id="bit-monitor" role="dialog" aria-label="Data Table Monitor"
-      className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-slate-900/95 backdrop-blur-md border-l border-slate-700 shadow-2xl flex flex-col text-slate-100 transition-transform duration-200 ease-in-out font-sans"
+      className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-slate-900/95 border-l border-slate-700 shadow-2xl flex flex-col text-slate-100 transition-transform duration-200 ease-in-out font-sans"
     >
       {/* Drawer Header */}
       <div className="p-3.5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">

@@ -666,7 +666,7 @@ export function LadderEditor({
   }, [selectedItemId, selectedRungIdx, rungs, clipboard, onUndo, onRedo, isRunning]);
 
   return (
-    <div className="bg-[#1e1e1e] border border-[#2d2d2d] overflow-hidden shadow-xl flex flex-col flex-1 focus:outline-none h-full">
+    <div className="ladder-editor bg-[#1e1e1e] border border-[#2d2d2d] overflow-hidden shadow-xl flex flex-col flex-1 focus:outline-none h-full">
       {/* 1. Categorized Instruction & I/O Palette */}
       <div className="relative">
         <InstructionPalette
@@ -819,7 +819,7 @@ export function LadderEditor({
             <div
               key={rung.id}
               onClick={() => { setSelectedRungIdx(rIdx); setSelectedItemId(null); }}
-              className={`rounded-2xl border-2 p-3.5 transition-all cursor-pointer ${
+              className={`ladder-rung rounded-2xl border-2 p-3.5 transition-all cursor-pointer ${
                 isRungSelected
                   ? 'border-cyan-500/80 bg-slate-900 shadow-[0_0_20px_rgba(6,182,212,0.15)]'
                   : conducting
@@ -1464,7 +1464,7 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
           <ChevronDown className="w-3 h-3 opacity-70" />
         </div>
         {symbols?.[item.operand] && (
-          <span className="text-[8.5px] text-slate-400/80 font-bold px-1 whitespace-nowrap overflow-hidden max-w-[80px] text-ellipsis leading-tight">
+          <span className="text-[10px] text-slate-400 font-bold px-1 whitespace-nowrap overflow-hidden max-w-[80px] text-ellipsis leading-tight">
             {symbols[item.operand]}
           </span>
         )}

@@ -113,7 +113,7 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning }) {
 
       {/* 2. Outputs: 4 Industrial Pilot Lamps */}
       <div className="bg-slate-950/90 p-3.5 rounded-xl border border-slate-800/80">
-        <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-slate-400 mb-3">
+        <div className="trainer-section-label flex flex-wrap gap-1 items-center justify-between text-[11px] font-semibold text-slate-400 mb-3">
           <span className="flex items-center gap-1.5">
             <CircleDot className="w-3.5 h-3.5 text-amber-400" />
             <span className="text-slate-300 font-bold">PILOT LAMPS (O:0)</span>
@@ -165,12 +165,12 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning }) {
 
       {/* 3. Inputs: 2 Toggle Switches & 2 Momentary Pushbuttons */}
       <div className="bg-slate-950/90 p-3.5 rounded-xl border border-slate-800/80">
-        <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-slate-400 mb-3">
+        <div className="trainer-section-label flex flex-wrap gap-1 items-center justify-between text-[11px] font-semibold text-slate-400 mb-3">
           <span className="flex items-center gap-1.5">
             <Power className="w-3.5 h-3.5 text-cyan-400" />
             <span className="text-slate-300 font-bold">INPUTS (I:0)</span>
           </span>
-          <span className="text-[10px] text-cyan-400/80">Pushbuttons release on click release</span>
+          <span className="text-[10px] text-cyan-400/80">Hold to press · release to reset</span>
         </div>
 
         <div className="grid grid-cols-4 gap-2.5">
