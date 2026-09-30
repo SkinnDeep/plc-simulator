@@ -43,13 +43,13 @@ export function Header({
         </div>
 
         {/* Global Controls & Tabs */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
+        <div className="flex items-center gap-1.5 sm:gap-2 justify-end shrink-0 whitespace-nowrap">
           <button
             onClick={onToggleTheme}
             className="flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-semibold transition cursor-pointer"
             title="Toggle Dark/Light Mode"
           >
-            {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+            {theme === 'dark' ? '☀️' : '🌙'}
           </button>
 
           <a
@@ -60,7 +60,7 @@ export function Header({
             title="Found a bug? Report it on GitHub!"
           >
             <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="hidden sm:inline">Report Bug</span>
+            
           </a>
 
           <button
@@ -69,7 +69,7 @@ export function Header({
             title="Open Simulator Tutorial & Guide"
           >
             <HelpCircle className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">Help</span>
+            
           </button>
 
           <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-0.5 sm:p-1 text-xs font-bold ml-1">
