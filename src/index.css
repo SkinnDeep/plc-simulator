@@ -282,23 +282,26 @@
 .editor-toolbar #tour-add-rung { background: var(--raised); color: var(--ink); border: 1px solid var(--line-strong); }
 #tour-rungs { padding: 10px 12px; background: var(--inset); background-image: radial-gradient(circle, color-mix(in srgb,var(--muted) 13%,transparent) .6px,transparent .7px); background-size: 18px 18px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 8px 8px; overscroll-behavior: contain; scrollbar-gutter: stable; min-height: 0; transition: none; filter: none; }
 .ladder-rung {
-  background: color-mix(in srgb, var(--surface) 92%, #0c1424);
-  border: 1px solid rgba(56, 189, 248, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   padding: 10px 14px;
   transition: all 160ms ease;
   animation: enter 180ms ease-out;
 }
+.ladder-rung:hover {
+  border-color: var(--line-strong);
+}
 .ladder-rung[data-selected="true"] {
   border-color: rgba(6, 182, 212, 0.7);
-  box-shadow: 0 0 16px rgba(6, 182, 212, 0.15), inset 0 0 10px rgba(6, 182, 212, 0.05);
-  background: rgba(12, 22, 38, 0.95);
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.15);
+  background: var(--surface);
 }
 .ladder-rung[data-conducting="true"] {
   border-color: rgba(16, 185, 129, 0.65);
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.15), inset 0 0 10px rgba(16, 185, 129, 0.05);
-  background: rgba(6, 32, 24, 0.9);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.15);
+  background: var(--surface);
 }
 .rung-heading { border-color: rgba(255,255,255,0.08); gap: 8px; margin-bottom: 8px; }
 .rung-heading > div:first-child { flex: 1; }

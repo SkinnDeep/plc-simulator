@@ -887,12 +887,12 @@ export function LadderEditor({
             <div
               key={rung.id}
               onClick={() => { setSelectedRungIdx(rIdx); setSelectedItemId(null); }}
-              data-selected={isRungSelected} data-conducting={conducting} className={`ladder-rung rounded-2xl border-2 p-3.5 transition-all cursor-pointer ${
+              data-selected={isRungSelected} data-conducting={conducting} className={`ladder-rung rounded-xl border p-3.5 transition-all cursor-pointer ${
                 isRungSelected
-                  ? 'border-cyan-500/80 bg-slate-900 shadow-[0_0_20px_rgba(6,182,212,0.15)]'
+                  ? 'border-cyan-500/80 bg-[#111214] shadow-[0_0_16px_rgba(6,182,212,0.15)]'
                   : conducting
-                    ? 'border-emerald-500/60 bg-slate-900/80'
-                    : 'border-slate-800 bg-slate-900/40 hover:border-slate-700'
+                    ? 'border-emerald-500/60 bg-[#111214]'
+                    : 'border-[#26282d] bg-[#111214] hover:border-[#3c4048]'
               }`}
             >
               {/* Rung Header */}
@@ -983,7 +983,7 @@ export function LadderEditor({
                                   ? 'ring-2 ring-cyan-400 border-cyan-400 bg-cyan-950/40'
                                   : branchActive
                                     ? 'border-emerald-500/80 bg-emerald-950/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                                    : 'border-indigo-500/60 bg-indigo-950/30'
+                                    : 'border-slate-700/80 bg-slate-950/50'
                               }`}
                             >
                               {/* Left Branch Rail (Vertical Tie) */}
@@ -1000,7 +1000,7 @@ export function LadderEditor({
                                     key={pathIdx}
                                     className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-900/90 border border-slate-700/60"
                                   >
-                                    <span className="text-[9px] font-mono font-bold text-indigo-300 px-1 py-0.5 rounded bg-indigo-950">
+                                    <span className="text-[9px] font-mono font-bold text-slate-300 px-1 py-0.5 rounded bg-slate-800">
                                       PATH {String.fromCharCode(65 + pathIdx)}
                                     </span>
 
