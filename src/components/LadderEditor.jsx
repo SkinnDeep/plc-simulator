@@ -1439,8 +1439,54 @@ export function LadderEditor({
   );
 }
 
+// Hook that reveals the trash button ~1 second after hovering over a rung element
+function useHoverTrash() {
+  const [hoverTrash, setHoverTrash] = useState(false);
+  const timerRef = useRef(null);
+
+  const handleMouseEnter = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setHoverTrash(true);
+    }, 900); // 900ms delay (~1s) to prevent accidental popups when skimming
+  };
+
+  const handleMouseLeave = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setHoverTrash(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return { hoverTrash, handleMouseEnter, handleMouseLeave };
+}
+
+function ItemDeleteButton({ isVisible, onDelete, title = "Delete instruction" }) {
+  if (!isVisible) return null;
+  return (
+    <div className="absolute -top-5 right-[-8px] flex items-center bg-[#1e222b] border border-slate-700 hover:border-red-500/80 shadow-xl rounded z-50 animate-in fade-in zoom-in-95 duration-150">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        className="p-1 hover:text-red-400 text-slate-400 hover:bg-red-950/40 rounded transition cursor-pointer flex items-center justify-center"
+        title={title}
+        aria-label={title}
+      >
+        <Trash2 className="w-3.5 h-3.5 text-red-400" />
+      </button>
+    </div>
+  );
+}
+
 // Minimalist ISA-101 Industrial Instruction Card
 function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onDelete, symbols, onDropItem }) {
+  const { hoverTrash, handleMouseEnter, handleMouseLeave } = useHoverTrash();
   const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
   const color = isActive 
     ? 'text-emerald-400 font-black drop-shadow-[0_0_8px_#10b981]' 
@@ -1472,6 +1518,8 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         if (onDropItem) onDropItem(e); 
       }}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={`instruction-card border rounded-lg flex flex-col items-center justify-center relative select-none group px-2 py-1 cursor-pointer transition-all ${enclosureClass}`}
     >
       {/* Label above - Explicit Dropdown Button */}
@@ -1509,19 +1557,14 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         {['ONS', 'OSR', 'OSF', 'MOV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type) && `[${item.type}]`}
       </div>
 
-      {/* Controls Overlay */}
-      {isSelected && (
-        <div className="absolute -top-6 right-[-10px] flex items-center bg-[#2d2d2d] border border-[#404040] shadow-xl rounded z-50">
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 hover:text-red-400 text-slate-400" title="Delete">
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      {/* Controls Overlay with hover & select support */}
+      <ItemDeleteButton isVisible={isSelected || hoverTrash} onDelete={onDelete} />
     </div>
   );
 }
 
 function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete, onDropItem }) {
+  const { hoverTrash, handleMouseEnter, handleMouseLeave } = useHoverTrash();
   const color = isActive ? 'text-emerald-400' : 'text-slate-300';
   const borderColor = isActive ? 'border-emerald-500/60' : 'border-[#3c414a]';
   const bgHeader = isActive ? 'bg-emerald-950/30' : 'bg-[#1a1c20]';
@@ -1550,6 +1593,8 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
         if (onDropItem) onDropItem(e); 
       }}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={`flex flex-col border-2 ${isActive ? 'border-emerald-500/60 bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]' : 'border-purple-500/40 bg-purple-950/20 shadow-md'} rounded overflow-hidden select-none relative cursor-pointer min-w-[140px] mx-2 ${isSelected ? 'ring-2 ring-purple-400' : ''}`}
     >
       <div className={`${bgHeader} px-2 py-1 border-b ${borderColor} flex justify-between items-center`}>
@@ -1623,18 +1668,13 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
         </div>
       </div>
       
-      {isSelected && (
-        <div className="absolute -top-6 right-[-10px] flex items-center bg-[#2d2d2d] border border-[#404040] shadow-xl rounded z-50">
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 hover:text-red-400 text-slate-400" title="Delete">
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      <ItemDeleteButton isVisible={isSelected || hoverTrash} onDelete={onDelete} />
     </div>
   );
 }
 
 function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete, onDropItem }) {
+  const { hoverTrash, handleMouseEnter, handleMouseLeave } = useHoverTrash();
   const isCompare = ['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(item.type);
   const color = isActive ? 'text-emerald-400' : (isCompare ? 'text-orange-300' : 'text-slate-300');
   const borderColor = isActive ? 'border-emerald-500/60' : (isCompare ? 'border-orange-500/40' : 'border-[#3c414a]');
@@ -1742,6 +1782,8 @@ function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, o
         if (onDropItem) onDropItem(e); 
       }}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={`flex flex-col border-2 ${
         isActive 
           ? 'border-emerald-500/60 bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]' 
@@ -1767,13 +1809,7 @@ function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, o
         {hasDest && renderField('Dest', 'dest', 'N7:0')}
       </div>
       
-      {isSelected && (
-        <div className="absolute -top-6 right-[-10px] flex items-center bg-[#2d2d2d] border border-[#404040] shadow-xl rounded z-50">
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 hover:text-red-400 text-slate-400" title="Delete">
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      <ItemDeleteButton isVisible={isSelected || hoverTrash} onDelete={onDelete} />
     </div>
   );
 }
