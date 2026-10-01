@@ -146,3 +146,29 @@ test('compare instructions evaluate timer accumulator (T4:0.ACC)', () => {
   e.executeScanCycle([rung(ins('LES', 'T4:0.ACC', { sourceA: 'T4:0.ACC', sourceB: '3' }), ins('OTE', 'O:0/1'))]);
   assert.equal(e.getBit('O:0/1'), false, 'T4:0.ACC (5) < 3 false');
 });
+
+test('timer status contacts (DN, EN, TT) map to timers and evaluate accurately', () => {
+  const e = engine();
+  // Timer T4:0 done, T4:1 timing
+  e.data.T4[0].DN = true;
+  e.data.T4[0].EN = true;
+  e.data.T4[0].TT = false;
+
+  e.data.T4[1].DN = false;
+  e.data.T4[1].EN = true;
+  e.data.T4[1].TT = true;
+
+  // Contact examining T4:0.DN and T4:0/DN
+  e.executeScanCycle([
+    rung(ins('XIC', 'T4:0.DN'), ins('OTE', 'O:0/0')),
+    rung(ins('XIC', 'T4:0/DN'), ins('OTE', 'O:0/1')),
+    rung(ins('XIC', 'T4:1.TT'), ins('OTE', 'O:0/2')),
+    rung(ins('XIC', 'T4:1.DN'), ins('OTE', 'O:0/3'))
+  ]);
+
+  assert.equal(e.getBit('O:0/0'), true, 'T4:0.DN drives O:0/0 true');
+  assert.equal(e.getBit('O:0/1'), true, 'T4:0/DN drives O:0/1 true');
+  assert.equal(e.getBit('O:0/2'), true, 'T4:1.TT drives O:0/2 true');
+  assert.equal(e.getBit('O:0/3'), false, 'T4:1.DN is false so O:0/3 is false');
+});
+

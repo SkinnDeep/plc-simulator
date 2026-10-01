@@ -91,6 +91,49 @@ export function LadderEditor({
   // Diagnostics validation passed from App via logicIssues
   const hasErrors = logicIssues?.length > 0;
 
+  // Extract all existing timers in the current program (or default to T4:0)
+  const existingTimers = useMemo(() => {
+    const set = new Set();
+    const traverse = (items) => {
+      if (!items) return;
+      for (const item of items) {
+        if (item.type === 'TON' || item.type === 'RES') {
+          if (item.operand && /^T4:\d+$/i.test(item.operand)) {
+            set.add(item.operand.toUpperCase());
+          }
+        }
+        if (item.branches) {
+          item.branches.forEach(b => traverse(b));
+        }
+      }
+    };
+    rungs.forEach(r => traverse(r.items));
+    if (set.size === 0) set.add('T4:0');
+    return Array.from(set).sort();
+  }, [rungs]);
+
+  // Prepend mapped timer options to Address Picker based on existing timers
+  const dynamicAddressOptions = useMemo(() => {
+    const baseOptions = activeSandbox === 'MetalShear' ? METAL_SHEAR_ADDRESS_OPTIONS : COMMON_ADDRESS_OPTIONS;
+    const timerItems = [];
+    existingTimers.forEach(t => {
+      timerItems.push(
+        { addr: `${t}.DN`, label: `${t} Done`, desc: `${t} Done Bit (DN)` },
+        { addr: `${t}.TT`, label: `${t} Timing`, desc: `${t} Timing Bit (TT)` },
+        { addr: `${t}.EN`, label: `${t} Enable`, desc: `${t} Enable Bit (EN)` },
+        { addr: t, label: `${t} Block`, desc: `Timer Register ${t}` }
+      );
+    });
+
+    const timerGroup = {
+      group: 'Mapped Timer Bits & Blocks',
+      items: timerItems
+    };
+
+    const filteredBase = baseOptions.filter(grp => grp.group !== 'Timers & Registers');
+    return [timerGroup, ...filteredBase];
+  }, [activeSandbox, existingTimers]);
+
   const isElementActive = (rungId, elemId) => {
     if (!scanResult?.rungEvaluations) return false;
     const rEval = scanResult.rungEvaluations.find(r => r.rungId === rungId);
@@ -354,7 +397,7 @@ export function LadderEditor({
         } else if (data.type === 'TON') {
           extra = { params: { pre: 2.0, timeBase: 1.0 } };
         }
-        handleAddInstructionToBranchPath(rungIdx, branchId, pathIdx, data.type, extra);
+        handleAddInstructionToBranchPath(rungIdx, branchId, pathIdx, data.type, extra, data.operand || null);
       } else if (data.kind === 'io') {
         handleAddInstructionToBranchPath(rungIdx, branchId, pathIdx, isOutputZone ? 'OTE' : 'XIC', {}, data.addr);
       }
@@ -498,7 +541,9 @@ export function LadderEditor({
           } else if (data.type === 'LIM') {
             extra = { params: { lowLim: '0', test: 'N7:0', highLim: '10' } };
           }
-          handleUpdateItem(rungIdx, targetItemId, { type: data.type, ...extra });
+          const updates = { type: data.type, ...extra };
+          if (data.operand) updates.operand = data.operand;
+          handleUpdateItem(rungIdx, targetItemId, updates);
         }
       }
     } catch (err) {
@@ -520,7 +565,7 @@ export function LadderEditor({
         if (data.isBranch || data.type === 'BRANCH' || data.type === 'SPLIT') {
           // ignore drop for branch
         } else {
-          handleAddInstructionToRung(rungIdx, data.type);
+          handleAddInstructionToRung(rungIdx, data.type, data.operand || null);
         }
       } else if (data.kind === 'existing-instruction') {
         const rung = rungs[rungIdx];
@@ -720,7 +765,8 @@ export function LadderEditor({
       <div className="relative">
         <InstructionPalette
           disabled={isRunning}
-          onAddInstruction={(type) => {
+          existingTimers={existingTimers}
+          onAddInstruction={(type, defaultAddr) => {
           if (selectedItemId) {
             let extra = {};
             if (['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ'].includes(type)) {
@@ -734,9 +780,11 @@ export function LadderEditor({
             } else if (type === 'TON') {
               extra = { params: { pre: 2.0, timeBase: 1.0 } };
             }
-            handleUpdateItem(selectedRungIdx, selectedItemId, { type, ...extra });
+            const updates = { type, ...extra };
+            if (defaultAddr) updates.operand = defaultAddr;
+            handleUpdateItem(selectedRungIdx, selectedItemId, updates);
           } else {
-            handleAddInstructionToRung(selectedRungIdx, type);
+            handleAddInstructionToRung(selectedRungIdx, type, defaultAddr);
           }
         }}
           isBranchMode={isBranchMode}
@@ -1429,7 +1477,7 @@ export function LadderEditor({
             </div>
 
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-              {(activeSandbox === 'MetalShear' ? METAL_SHEAR_ADDRESS_OPTIONS : COMMON_ADDRESS_OPTIONS).map((grp) => (
+              {dynamicAddressOptions.map((grp) => (
                 <div key={grp.group} className="space-y-1.5">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
                     {grp.group}
@@ -1683,6 +1731,34 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         </div>
       )}
 
+      {/* Quick Bit Selector for Timer Status Contacts (DN, TT, EN) */}
+      {['XIC', 'XIO'].includes(item.type) && item.operand && /^T4:\d+[./](DN|EN|TT)$/i.test(item.operand) && (() => {
+        const match = item.operand.match(/^(T4:\d+)[./]([A-Z]+)$/i);
+        const prefix = match[1].toUpperCase();
+        const curBit = match[2].toUpperCase();
+        return (
+          <div className="flex items-center bg-black/50 rounded border border-purple-500/40 overflow-hidden text-[9px] font-mono mt-1 shadow-sm">
+            {['DN', 'TT', 'EN'].map((bit) => (
+              <button
+                key={bit}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onUpdate) onUpdate({ operand: `${prefix}.${bit}` });
+                }}
+                className={`px-1.5 py-0.5 transition cursor-pointer ${
+                  curBit === bit
+                    ? 'bg-purple-500/50 text-purple-200 font-bold'
+                    : 'text-slate-400 hover:text-purple-200 hover:bg-slate-800'
+                }`}
+                title={`Map contact to ${prefix}.${bit}`}
+              >
+                {bit}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Controls Overlay with hover & select support */}
       <ItemDeleteButton isVisible={isSelected || hoverTrash} onDelete={onDelete} />
     </div>
@@ -1777,18 +1853,63 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
           </div>
         </div>
         
-        {/* Right Side: Output Coils (EN, TT, DN) */}
-        <div className={`${bgBody} flex flex-col items-center justify-between py-1 px-1 w-10 shrink-0 bg-[#1e2025]`}>
-          <div className="flex flex-col items-center">
-            <span className={`text-[8px] font-mono font-bold mb-0.5 ${enActive ? 'text-emerald-400' : 'text-slate-500'}`}>(EN)</span>
+        {/* Right Side: Output Coils (EN, TT, DN) - draggable onto rungs as contacts */}
+        <div className={`${bgBody} flex flex-col items-center justify-between py-1 px-1 w-11 shrink-0 bg-[#1e2025]`}>
+          <div
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              e.dataTransfer.setData('application/json', JSON.stringify({
+                kind: 'instruction',
+                type: 'XIC',
+                operand: `${item.operand || 'T4:0'}.EN`,
+                timerBit: 'EN',
+                name: 'Timer Enable (EN)'
+              }));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
+            className="flex flex-col items-center cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-purple-950/40 transition group"
+            title={`Drag to place ${item.operand || 'T4:0'}.EN contact on a rung`}
+          >
+            <span className={`text-[8px] font-mono font-bold mb-0.5 group-hover:text-purple-300 ${enActive ? 'text-emerald-400' : 'text-slate-500'}`}>(EN)</span>
             <div className={`w-2 h-2 rounded-full ${enActive ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-slate-700'}`} />
           </div>
-          <div className="flex flex-col items-center">
-            <span className={`text-[8px] font-mono font-bold mb-0.5 ${ttActive ? 'text-emerald-400' : 'text-slate-500'}`}>(TT)</span>
+          <div
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              e.dataTransfer.setData('application/json', JSON.stringify({
+                kind: 'instruction',
+                type: 'XIC',
+                operand: `${item.operand || 'T4:0'}.TT`,
+                timerBit: 'TT',
+                name: 'Timer Timing (TT)'
+              }));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
+            className="flex flex-col items-center cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-purple-950/40 transition group"
+            title={`Drag to place ${item.operand || 'T4:0'}.TT contact on a rung`}
+          >
+            <span className={`text-[8px] font-mono font-bold mb-0.5 group-hover:text-purple-300 ${ttActive ? 'text-emerald-400' : 'text-slate-500'}`}>(TT)</span>
             <div className={`w-2 h-2 rounded-full ${ttActive ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-slate-700'}`} />
           </div>
-          <div className="flex flex-col items-center">
-            <span className={`text-[8px] font-mono font-bold mb-0.5 ${dnActive ? 'text-emerald-400' : 'text-slate-500'}`}>(DN)</span>
+          <div
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              e.dataTransfer.setData('application/json', JSON.stringify({
+                kind: 'instruction',
+                type: 'XIC',
+                operand: `${item.operand || 'T4:0'}.DN`,
+                timerBit: 'DN',
+                name: 'Timer Done (DN)'
+              }));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
+            className="flex flex-col items-center cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-purple-950/40 transition group"
+            title={`Drag to place ${item.operand || 'T4:0'}.DN contact on a rung`}
+          >
+            <span className={`text-[8px] font-mono font-bold mb-0.5 group-hover:text-purple-300 ${dnActive ? 'text-emerald-400' : 'text-slate-500'}`}>(DN)</span>
             <div className={`w-2 h-2 rounded-full ${dnActive ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-slate-700'}`} />
           </div>
         </div>

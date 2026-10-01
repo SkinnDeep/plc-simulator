@@ -7,9 +7,18 @@ export function InstructionPalette({
   isBranchMode,
   onToggleBranchMode,
   onSelectIoToken,
-  hasSelection
+  hasSelection,
+  existingTimers = ['T4:0']
 }) {
   const [activeCategory, setActiveCategory] = useState('Bit');
+  const [mappedTimer, setMappedTimer] = useState(existingTimers[0] || 'T4:0');
+
+  // Keep mappedTimer aligned with existing timers if list changes
+  React.useEffect(() => {
+    if (existingTimers.length > 0 && !existingTimers.includes(mappedTimer)) {
+      setMappedTimer(existingTimers[0]);
+    }
+  }, [existingTimers, mappedTimer]);
 
   const categories = ['Bit', 'Timers', 'Math', 'Move / logic', 'Compare'];
 
@@ -129,7 +138,64 @@ export function InstructionPalette({
       {/* Item Strip */}
       <div className="palette-strip">
         {activeCategory === 'Bit' && renderIcons(bitIcons)}
-        {activeCategory === 'Timers' && renderIcons(timerIcons)}
+        {activeCategory === 'Timers' && (
+          <div className="flex flex-wrap items-center gap-2">
+            {renderIcons(timerIcons)}
+
+            <div className="h-7 w-[1px] bg-slate-700/60 mx-1 shrink-0" />
+
+            <div className="flex items-center gap-2 bg-purple-950/25 border border-purple-500/35 rounded-lg px-2.5 py-1">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono">
+                <span className="text-purple-300 font-bold uppercase tracking-wider">Map To:</span>
+                <select
+                  value={mappedTimer}
+                  onChange={(e) => setMappedTimer(e.target.value)}
+                  className="bg-slate-900 border border-purple-500/50 text-purple-200 text-xs font-mono font-bold rounded px-1.5 py-0.5 focus:outline-none cursor-pointer hover:border-purple-400"
+                  title="Select which existing timer to map DN, TT, or EN to"
+                >
+                  {existingTimers.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                  {['T4:0', 'T4:1', 'T4:2', 'T4:3'].filter(t => !existingTimers.includes(t)).map(t => (
+                    <option key={t} value={t}>{t} (New)</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {[
+                  { bit: 'DN', name: 'Timer Done', desc: 'Done Bit (DN)' },
+                  { bit: 'TT', name: 'Timer Timing', desc: 'Timing Bit (TT)' },
+                  { bit: 'EN', name: 'Timer Enable', desc: 'Enable Bit (EN)' },
+                ].map(item => {
+                  const fullAddr = `${mappedTimer}.${item.bit}`;
+                  return (
+                    <button
+                      key={item.bit}
+                      disabled={disabled}
+                      aria-label={`${item.name} (${fullAddr})`}
+                      draggable={!disabled}
+                      onDragStart={(e) => handleDragStart(e, {
+                        kind: 'instruction',
+                        type: 'XIC',
+                        operand: fullAddr,
+                        timerBit: item.bit,
+                        name: item.name
+                      })}
+                      onClick={() => onAddInstruction('XIC', fullAddr)}
+                      className="instruction-button border border-purple-500/40 bg-purple-950/30 hover:border-purple-400 hover:bg-purple-900/50 text-purple-200 flex flex-col items-center justify-center px-2 py-0.5 rounded transition-all cursor-pointer shadow-sm group min-w-[50px]"
+                      title={`Drag or click to add ${item.name} mapped to ${fullAddr}`}
+                    >
+                      <span className="instruction-symbol text-[10px] text-cyan-300 group-hover:text-cyan-200">─] [─</span>
+                      <span className="instruction-name text-[10px] font-bold text-purple-200">{item.bit}</span>
+                      <span className="text-[8px] font-mono text-purple-300/80 leading-none">{fullAddr}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
         {activeCategory === 'Math' && renderIcons(mathIcons)}
         {activeCategory === 'Compare' && renderIcons(compareIcons)}
         {activeCategory === 'Move / logic' && renderIcons(moveIcons)}

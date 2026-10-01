@@ -530,6 +530,30 @@
   color: #ffffff !important;
 }
 
+/* Quick timer bit selector [ DN | TT | EN ] */
+.light-mode .instruction-card .border-purple-500\/40 {
+  background-color: var(--raised) !important;
+  border-color: #d8b4fe !important;
+}
+.light-mode .instruction-card .border-purple-500\/40 button {
+  color: var(--muted) !important;
+}
+.light-mode .instruction-card .border-purple-500\/40 button:hover {
+  color: var(--ink) !important;
+  background-color: var(--line) !important;
+}
+.light-mode .instruction-card .border-purple-500\/40 button.bg-purple-500\/50 {
+  background-color: #9333ea !important;
+  color: #ffffff !important;
+}
+
+/* Timer Map To select in Palette */
+.light-mode .instruction-palette select {
+  background-color: var(--surface) !important;
+  border-color: #d8b4fe !important;
+  color: #6b21a8 !important;
+}
+
 /* Trash hover delete button */
 .light-mode div:has(> button[title="Delete instruction"]),
 .light-mode [class*="bg-[#1e222b]"] {
