@@ -39,6 +39,12 @@ export function InstructionPalette({
 
   const compareIcons = [
     { type: 'EQU', symbol: '[EQU]', name: 'Equal' },
+    { type: 'NEQ', symbol: '[NEQ]', name: 'Not Equal' },
+    { type: 'GRT', symbol: '[GRT]', name: 'Greater Than' },
+    { type: 'GEQ', symbol: '[GEQ]', name: 'Greater Than or Equal' },
+    { type: 'LES', symbol: '[LES]', name: 'Less Than' },
+    { type: 'LEQ', symbol: '[LEQ]', name: 'Less Than or Equal' },
+    { type: 'LIM', symbol: '[LIM]', name: 'Limit Test' },
   ];
 
   const moveIcons = [
@@ -68,7 +74,7 @@ export function InstructionPalette({
     if (['ADD', 'SUB', 'MUL', 'DIV'].includes(inst.type)) {
       return 'border-teal-500/30 bg-teal-950/20 text-teal-300 hover:border-teal-400 hover:bg-teal-900/40 hover:text-teal-200';
     }
-    if (inst.type === 'EQU') {
+    if (['EQU', 'NEQ', 'GRT', 'GEQ', 'LES', 'LEQ', 'LIM'].includes(inst.type)) {
       return 'border-orange-500/30 bg-orange-950/20 text-orange-300 hover:border-orange-400 hover:bg-orange-900/40 hover:text-orange-200';
     }
     if (inst.type === 'MOV') {

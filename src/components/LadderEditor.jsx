@@ -148,6 +148,8 @@ export function LadderEditor({
     if (!operand) {
       if (['ADD', 'SUB', 'MUL', 'DIV', 'MOV'].includes(type)) {
         operand = 'N7:0';
+      } else if (['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(type)) {
+        operand = 'N7:0';
       } else if (type === 'TON' || type === 'RES') {
         operand = 'T4:0';
       } else {
@@ -161,8 +163,10 @@ export function LadderEditor({
       params = { sourceA: 'N7:0', sourceB: '1', dest: 'N7:1' };
     } else if (type === 'MOV') {
       params = { source: 'N7:0', dest: 'N7:1' };
-    } else if (type === 'EQU') {
+    } else if (['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ'].includes(type)) {
       params = { sourceA: 'N7:0', sourceB: '1' };
+    } else if (type === 'LIM') {
+      params = { lowLim: '0', test: 'N7:0', highLim: '10' };
     }
 
     const newItem = {
@@ -450,7 +454,13 @@ export function LadderEditor({
         if (data.isBranch || data.type === 'BRANCH' || data.type === 'SPLIT') {
           handleBranchAroundItem(rungIdx, targetItemId);
         } else {
-          handleUpdateItem(rungIdx, targetItemId, { type: data.type });
+          let extra = {};
+          if (['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ'].includes(data.type)) {
+            extra = { params: { sourceA: 'N7:0', sourceB: '1' } };
+          } else if (data.type === 'LIM') {
+            extra = { params: { lowLim: '0', test: 'N7:0', highLim: '10' } };
+          }
+          handleUpdateItem(rungIdx, targetItemId, { type: data.type, ...extra });
         }
       }
     } catch (err) {
@@ -940,7 +950,7 @@ export function LadderEditor({
 
                                     {path.map(subItem => (
                                       <React.Fragment key={subItem.id}>
-                                        {['EQU'].includes(subItem.type) ? (
+                                        {['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(subItem.type) ? (
                                           <MathInstructionBlock
                                             item={subItem}
                                             isSelected={selectedItemId === subItem.id}
@@ -1022,7 +1032,7 @@ export function LadderEditor({
   onNodeClick={handleNodeClick}
 />
                           <div className="relative group mx-1">
-                            {['EQU'].includes(item.type) ? (
+                            {['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(item.type) ? (
                               <MathInstructionBlock
                                 item={item}
                                 isSelected={selectedItemId === item.id}
@@ -1140,7 +1150,7 @@ export function LadderEditor({
                                               onDelete={() => handleDeleteItem(rIdx, subItem.id)}
                                               onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
                                             />
-                                          ) : ['ADD', 'SUB', 'MUL', 'DIV', 'MOV', 'EQU'].includes(subItem.type) ? (
+                                          ) : ['ADD', 'SUB', 'MUL', 'DIV', 'MOV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(subItem.type) ? (
                                             <MathInstructionBlock
                                               item={subItem}
                                               isSelected={selectedItemId === subItem.id}
@@ -1238,7 +1248,7 @@ export function LadderEditor({
                                   onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
                                   onBranchAround={() => handleBranchAroundItem(rIdx, item.id)}
                                 />
-                              ) : ['ADD', 'SUB', 'MUL', 'DIV', 'MOV', 'EQU'].includes(item.type) ? (
+                              ) : ['ADD', 'SUB', 'MUL', 'DIV', 'MOV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(item.type) ? (
                                 <MathInstructionBlock
                                   item={item}
                                   isSelected={selectedItemId === item.id}
@@ -1497,7 +1507,7 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         {item.type === 'OTU' && '-(U)-'}
         {item.type === 'TON' && '[TON]'}
         {item.type === 'RES' && '-(RES)-'}
-        {['ONS', 'OSR', 'OSF', 'MOV', 'EQU', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type) && `[${item.type}]`}
+        {['ONS', 'OSR', 'OSF', 'MOV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type) && `[${item.type}]`}
       </div>
 
       {/* Controls Overlay */}
@@ -1626,9 +1636,10 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
 }
 
 function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete, onDropItem }) {
-  const color = isActive ? 'text-emerald-400' : 'text-slate-300';
-  const borderColor = isActive ? 'border-emerald-500/60' : 'border-[#3c414a]';
-  const bgHeader = isActive ? 'bg-emerald-950/30' : 'bg-[#1a1c20]';
+  const isCompare = ['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(item.type);
+  const color = isActive ? 'text-emerald-400' : (isCompare ? 'text-orange-300' : 'text-slate-300');
+  const borderColor = isActive ? 'border-emerald-500/60' : (isCompare ? 'border-orange-500/40' : 'border-[#3c414a]');
+  const bgHeader = isActive ? 'bg-emerald-950/30' : (isCompare ? 'bg-orange-950/40' : 'bg-[#1a1c20]');
   const bgBody = 'bg-[#22252a]';
   
   const getTitle = () => {
@@ -1639,26 +1650,81 @@ function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, o
       case 'DIV': return 'Divide';
       case 'MOV': return 'Move';
       case 'EQU': return 'Equal';
+      case 'NEQ': return 'Not Equal';
+      case 'LES': return 'Less Than';
+      case 'LEQ': return 'Less Equal';
+      case 'GRT': return 'Greater Than';
+      case 'GEQ': return 'Greater Equal';
+      case 'LIM': return 'Limit Test';
       default: return item.type;
     }
   };
 
-  const hasSourceA = ['ADD', 'SUB', 'MUL', 'DIV', 'EQU'].includes(item.type);
-  const hasSourceB = ['ADD', 'SUB', 'MUL', 'DIV', 'EQU'].includes(item.type);
+  const isLim = item.type === 'LIM';
+  const hasSourceA = ['ADD', 'SUB', 'MUL', 'DIV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ'].includes(item.type);
+  const hasSourceB = ['ADD', 'SUB', 'MUL', 'DIV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ'].includes(item.type);
   const hasDest = ['ADD', 'SUB', 'MUL', 'DIV', 'MOV'].includes(item.type);
   const hasSource = item.type === 'MOV';
 
+  const resolveLiveVal = (addr) => {
+    if (!plcData || addr === undefined || addr === null) return null;
+    const str = String(addr).trim();
+    if (/^-?\d+(\.\d+)?$/.test(str)) return parseFloat(str);
+    if (str.startsWith('N7:')) {
+      const idx = parseInt(str.replace('N7:', ''), 10);
+      return plcData.N7?.[idx] !== undefined ? plcData.N7[idx] : 0;
+    }
+    if (str.startsWith('T4:')) {
+      const match = str.match(/^T4:(\d+)\.([A-Z]+)$/i);
+      if (match) {
+        const t = plcData.T4?.[parseInt(match[1], 10)];
+        const field = match[2].toUpperCase();
+        if (t && (field === 'ACC' || field === 'PRE')) return t[field];
+      }
+    }
+    if (str.startsWith('C5:')) {
+      const match = str.match(/^C5:(\d+)\.([A-Z]+)$/i);
+      if (match) {
+        const c = plcData.C5?.[parseInt(match[1], 10)];
+        const field = match[2].toUpperCase();
+        if (c && (field === 'ACC' || field === 'PRE')) return c[field];
+      }
+    }
+    if (plcData.bits && Object.hasOwn(plcData.bits, str)) {
+      return plcData.bits[str] ? 1 : 0;
+    }
+    return null;
+  };
+
   const renderField = (label, paramKey, defaultVal) => {
+    const rawVal = item.params?.[paramKey] !== undefined ? item.params[paramKey] : defaultVal;
+    const liveVal = resolveLiveVal(rawVal);
+    const hasLive = liveVal !== null && plcData;
+
     return (
-      <div className="flex justify-between items-center text-[10px]">
-        <span className="text-slate-400 mr-2">{label}</span>
-        <input 
-          type="text"
-          value={item.params?.[paramKey] !== undefined ? item.params[paramKey] : defaultVal}
-          onChange={(e) => onUpdate({ params: { ...(item.params || {}), [paramKey]: e.target.value } })}
-          onClick={(e) => e.stopPropagation()}
-          className="font-mono text-cyan-300 bg-slate-900 border border-slate-700 hover:border-slate-500 focus:outline-none w-[60px] text-right rounded px-1 py-0.5"
-        />
+      <div className="flex items-center justify-between gap-1.5 text-[10px]">
+        <span className="text-slate-400 shrink-0 font-medium">{label}</span>
+        <div className="flex items-center gap-1">
+          <input 
+            type="text"
+            value={rawVal}
+            onChange={(e) => {
+              const newVal = e.target.value;
+              const updates = { params: { ...(item.params || {}), [paramKey]: newVal } };
+              if (paramKey === 'sourceA' || paramKey === 'test' || paramKey === 'source') {
+                updates.operand = newVal;
+              }
+              onUpdate(updates);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="font-mono text-cyan-300 bg-slate-900 border border-slate-700 hover:border-slate-500 focus:outline-none w-[64px] text-right rounded px-1 py-0.5"
+          />
+          {hasLive && (
+            <span className="text-[9px] font-mono font-bold px-1 rounded bg-slate-800 text-amber-300 shrink-0 border border-slate-700/60" title={`Current evaluated value: ${liveVal}`}>
+              [{liveVal}]
+            </span>
+          )}
+        </div>
       </div>
     );
   };
@@ -1670,14 +1736,22 @@ function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, o
         e.dataTransfer.setData('application/json', JSON.stringify({ kind: 'existing-instruction', itemId: item.id }));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-cyan-400'); }}
-      onDragLeave={(e) => e.currentTarget.classList.remove('ring-2', 'ring-cyan-400')}
+      onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', isCompare ? 'ring-orange-400' : 'ring-teal-400'); }}
+      onDragLeave={(e) => e.currentTarget.classList.remove('ring-2', 'ring-orange-400', 'ring-teal-400')}
       onDrop={(e) => { 
-        e.currentTarget.classList.remove('ring-2', 'ring-cyan-400');
+        e.currentTarget.classList.remove('ring-2', 'ring-orange-400', 'ring-teal-400');
         if (onDropItem) onDropItem(e); 
       }}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
-      className={`flex flex-col border-2 ${isActive ? 'border-emerald-500/60 bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]' : 'border-teal-500/40 bg-teal-950/20 shadow-md'} rounded overflow-hidden select-none relative cursor-pointer min-w-[130px] mx-2 ${isSelected ? 'ring-2 ring-teal-400' : ''}`}
+      className={`flex flex-col border-2 ${
+        isActive 
+          ? 'border-emerald-500/60 bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]' 
+          : isCompare 
+            ? 'border-orange-500/40 bg-orange-950/20 shadow-md' 
+            : 'border-teal-500/40 bg-teal-950/20 shadow-md'
+      } rounded overflow-hidden select-none relative cursor-pointer min-w-[130px] mx-2 ${
+        isSelected ? (isCompare ? 'ring-2 ring-orange-400' : 'ring-2 ring-teal-400') : ''
+      }`}
     >
       <div className={`${bgHeader} px-2 py-1 border-b ${borderColor} flex justify-between items-center`}>
         <span className={`text-[10px] font-bold ${color}`}>{item.type}</span>
@@ -1686,8 +1760,11 @@ function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, o
       
       <div className={`${bgBody} p-2 flex flex-col gap-1.5`}>
         {hasSource && renderField('Source', 'source', '0')}
-        {hasSourceA && renderField('Source A', 'sourceA', '0')}
-        {hasSourceB && renderField('Source B', 'sourceB', '0')}
+        {isLim && renderField('Low Lim', 'lowLim', '0')}
+        {isLim && renderField('Test', 'test', item.operand || 'N7:0')}
+        {isLim && renderField('High Lim', 'highLim', '10')}
+        {hasSourceA && renderField('Source A', 'sourceA', item.operand || 'N7:0')}
+        {hasSourceB && renderField('Source B', 'sourceB', '1')}
         {hasDest && renderField('Dest', 'dest', 'N7:0')}
       </div>
       

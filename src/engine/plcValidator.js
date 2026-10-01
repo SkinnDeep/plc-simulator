@@ -95,7 +95,8 @@ export function validateLadderLogic(rungs, strictMode = false) {
         fix: 'Choose an address compatible with this instruction from the address picker.' });
 
       // Check operand presence
-      if (!item.operand || String(item.operand).trim() === '') {
+      const isBlockWithParams = ['ADD', 'SUB', 'MUL', 'DIV', 'MOV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(item.type);
+      if (!isBlockWithParams && (!item.operand || String(item.operand).trim() === '')) {
         issues.push({
           severity: 'error',
           rungIdx: rIdx,

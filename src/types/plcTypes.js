@@ -14,6 +14,12 @@ export const INSTRUCTION_TYPES = {
   TON: 'TON', // Timer On Delay
   RES: 'RES', // Reset Timer
   EQU: 'EQU', // Equal
+  NEQ: 'NEQ', // Not Equal
+  LES: 'LES', // Less Than
+  LEQ: 'LEQ', // Less Than or Equal
+  GRT: 'GRT', // Greater Than
+  GEQ: 'GEQ', // Greater Than or Equal
+  LIM: 'LIM', // Limit Test
   MOV: 'MOV', // Move
   ADD: 'ADD', // Add Math Box
   SUB: 'SUB', // Subtract Math Box
@@ -31,7 +37,13 @@ export const INSTRUCTION_METADATA = {
   OTU: { name: 'OTU', symbol: '-(U)-', desc: 'Unlatch Output (Turns OFF)', category: 'Bit', isOutput: true },
   TON: { name: 'TON', symbol: '[TON]', desc: 'Timer On Delay', category: 'Timer', isBlock: true, isOutput: true },
   RES: { name: 'RES', symbol: '-(RES)-', desc: 'Reset Timer', category: 'Timer', isOutput: true },
-  EQU: { name: 'EQU', symbol: '[EQU]', desc: 'Equal (Compare Value)', category: 'Compare', isBlock: true },
+  EQU: { name: 'EQU', symbol: '[EQU]', desc: 'Equal (Source A == Source B)', category: 'Compare', isBlock: true },
+  NEQ: { name: 'NEQ', symbol: '[NEQ]', desc: 'Not Equal (Source A != Source B)', category: 'Compare', isBlock: true },
+  LES: { name: 'LES', symbol: '[LES]', desc: 'Less Than (Source A < Source B)', category: 'Compare', isBlock: true },
+  LEQ: { name: 'LEQ', symbol: '[LEQ]', desc: 'Less Than or Equal (Source A <= Source B)', category: 'Compare', isBlock: true },
+  GRT: { name: 'GRT', symbol: '[GRT]', desc: 'Greater Than (Source A > Source B)', category: 'Compare', isBlock: true },
+  GEQ: { name: 'GEQ', symbol: '[GEQ]', desc: 'Greater Than or Equal (Source A >= Source B)', category: 'Compare', isBlock: true },
+  LIM: { name: 'LIM', symbol: '[LIM]', desc: 'Limit Test (Low Lim <= Test <= High Lim)', category: 'Compare', isBlock: true },
   MOV: { name: 'MOV', symbol: '[MOV]', desc: 'Move Register Value', category: 'Move', isBlock: true, isOutput: true },
   ADD: { name: 'ADD', symbol: '[ADD]', desc: 'Math: Add (Dest = Source A + Source B)', category: 'Math', isBlock: true, isOutput: true },
   SUB: { name: 'SUB', symbol: '[SUB]', desc: 'Math: Subtract (Dest = Source A - Source B)', category: 'Math', isBlock: true, isOutput: true },

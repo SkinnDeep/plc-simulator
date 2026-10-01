@@ -120,6 +120,21 @@ export class PLCEngine {
       return this.getBit(addr) ? 1 : 0;
     }
 
+    // Counter ACC / PRE (C5:0.ACC)
+    if (addr.startsWith('C5:')) {
+      const match = addr.match(/^C5:(\d+)\.([A-Z]+)$/);
+      if (match) {
+        const idx = parseInt(match[1], 10);
+        const field = match[2].toUpperCase();
+        const counter = this.data.C5?.[idx];
+        if (counter) {
+          if (field === 'ACC') return counter.ACC || 0;
+          if (field === 'PRE') return counter.PRE || 0;
+        }
+      }
+      return this.getBit(addr) ? 1 : 0;
+    }
+
     return this.getBit(addr) ? 1 : 0;
   }
 
@@ -375,7 +390,61 @@ export class PLCEngine {
       case 'EQU': {
         const srcA = this.getValue(params.sourceA !== undefined ? params.sourceA : operand);
         const srcB = this.getValue(params.sourceB !== undefined ? params.sourceB : 1);
-        active = (srcA === srcB);
+        active = Math.abs(srcA - srcB) < 0.00001;
+        powerOut = powerIn && active;
+        break;
+      }
+
+      case 'NEQ': {
+        const srcA = this.getValue(params.sourceA !== undefined ? params.sourceA : operand);
+        const srcB = this.getValue(params.sourceB !== undefined ? params.sourceB : 1);
+        active = Math.abs(srcA - srcB) >= 0.00001;
+        powerOut = powerIn && active;
+        break;
+      }
+
+      case 'LES': {
+        const srcA = this.getValue(params.sourceA !== undefined ? params.sourceA : operand);
+        const srcB = this.getValue(params.sourceB !== undefined ? params.sourceB : 1);
+        active = srcA < srcB;
+        powerOut = powerIn && active;
+        break;
+      }
+
+      case 'LEQ': {
+        const srcA = this.getValue(params.sourceA !== undefined ? params.sourceA : operand);
+        const srcB = this.getValue(params.sourceB !== undefined ? params.sourceB : 1);
+        active = srcA <= srcB + 0.00001;
+        powerOut = powerIn && active;
+        break;
+      }
+
+      case 'GRT': {
+        const srcA = this.getValue(params.sourceA !== undefined ? params.sourceA : operand);
+        const srcB = this.getValue(params.sourceB !== undefined ? params.sourceB : 1);
+        active = srcA > srcB;
+        powerOut = powerIn && active;
+        break;
+      }
+
+      case 'GEQ': {
+        const srcA = this.getValue(params.sourceA !== undefined ? params.sourceA : operand);
+        const srcB = this.getValue(params.sourceB !== undefined ? params.sourceB : 1);
+        active = srcA >= srcB - 0.00001;
+        powerOut = powerIn && active;
+        break;
+      }
+
+      case 'LIM': {
+        const low = this.getValue(params.lowLim !== undefined ? params.lowLim : 0);
+        const test = this.getValue(params.test !== undefined ? params.test : (operand || 'N7:0'));
+        const high = this.getValue(params.highLim !== undefined ? params.highLim : 10);
+        if (low <= high) {
+          active = (test >= low - 0.00001 && test <= high + 0.00001);
+        } else {
+          // Low Lim > High Lim: standard inverted wrap-around limit test
+          active = (test >= low - 0.00001 || test <= high + 0.00001);
+        }
         powerOut = powerIn && active;
         break;
       }
