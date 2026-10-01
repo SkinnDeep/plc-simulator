@@ -80,7 +80,7 @@
 .app-shell button:not(:disabled):active { transform: translateY(1px); }
 
 /* Navigation and execution remain in their original two rows. */
-.header-stack { flex: none; z-index: 50; }
+.header-stack { position: relative; flex: none; z-index: 50; }
 .app-header { height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 28px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 11px; white-space: nowrap; }
 .brand-mark { color: var(--ink); display: flex; }

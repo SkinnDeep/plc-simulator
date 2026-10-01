@@ -11,7 +11,7 @@ import { LearningTab } from './components/LearningTab';
 import { SpotlightTour } from './components/SpotlightTour';
 import { BitMonitorDrawer } from './components/BitMonitorDrawer';
 import { validateLadderLogic } from './engine/plcValidator';
-import { Check, AlertTriangle, Workflow, SlidersHorizontal, Download, Trash2 } from 'lucide-react';
+import { Check, AlertTriangle, Workflow, SlidersHorizontal, Download, Trash2, RotateCcw, X } from 'lucide-react';
 
 const INITIAL_BLANK_RUNGS = [
   {
@@ -95,18 +95,6 @@ export function App() {
 
   const [isFullResetModalOpen, setIsFullResetModalOpen] = useState(false);
 
-  const customVariablesList = useMemo(() => {
-    const defaults = activeSandbox === 'MetalShear' ? DEFAULT_SHEAR_SYMBOLS : DEFAULT_PLC1_SYMBOLS;
-    const current = symbolsMap[activeSandbox] || {};
-    const list = [];
-    Object.keys(current).forEach(addr => {
-      if (current[addr] && current[addr] !== defaults[addr]) {
-        list.push({ addr, name: current[addr], original: defaults[addr] || '(default)' });
-      }
-    });
-    return list;
-  }, [symbolsMap, activeSandbox]);
-
   const handleExportProgram = () => {
     const exportPayload = {
       version: 'RSLogix-500-Sim-v2',
@@ -131,6 +119,7 @@ export function App() {
       delete next[activeSandbox];
       try {
         localStorage.setItem('plcSymbolsBySandbox', JSON.stringify(next));
+        localStorage.removeItem('plcSymbols');
       } catch (err) {
         console.error(err);
       }
@@ -173,6 +162,57 @@ export function App() {
       localStorage.setItem('plcRungs', JSON.stringify(currentRungs));
     } catch {}
   }, [currentRungs]);
+
+  // Collect custom variable names modified in the current active program/panel
+  const customVariablesList = useMemo(() => {
+    const defaults = activeSandbox === 'MetalShear' ? DEFAULT_SHEAR_SYMBOLS : DEFAULT_PLC1_SYMBOLS;
+    const current = symbolsMap[activeSandbox] || {};
+
+    // Collect addresses actively referenced in current rungs
+    const activeRungAddresses = new Set();
+    const scanItems = (items) => {
+      if (!Array.isArray(items)) return;
+      items.forEach(item => {
+        if (!item) return;
+        if (item.type === 'BRANCH' && Array.isArray(item.branches)) {
+          item.branches.forEach(b => scanItems(b));
+          return;
+        }
+        if (item.operand) {
+          activeRungAddresses.add(item.operand);
+          const base = item.operand.split('.')[0];
+          if (base) activeRungAddresses.add(base);
+        }
+        if (item.params) {
+          ['source', 'sourceA', 'sourceB', 'dest', 'test', 'lowLim', 'highLim'].forEach(k => {
+            const v = item.params[k];
+            if (typeof v === 'string' && /^[A-Z0-9_:\/\.]+$/i.test(v)) {
+              activeRungAddresses.add(v);
+              const base = v.split('.')[0];
+              if (base) activeRungAddresses.add(base);
+            }
+          });
+        }
+      });
+    };
+    (currentRungs || []).forEach(r => scanItems(r.items));
+
+    // Also include physical panel I/O (switches and pilot lights)
+    const panelIO = activeSandbox === 'MetalShear'
+      ? ['I:0/0', 'I:0/1', 'I:0/2', 'I:0/3', 'I:0/4', 'O:0/0', 'O:0/1', 'O:0/2', 'O:0/3']
+      : ['I:0/0', 'I:0/1', 'I:0/2', 'I:0/3', 'O:0/0', 'O:0/1', 'O:0/2', 'O:0/3'];
+
+    const relevantAddresses = new Set([...activeRungAddresses, ...panelIO]);
+
+    const list = [];
+    Object.keys(current).forEach(addr => {
+      // ONLY include if it's relevant to the current active project and changed from default!
+      if (relevantAddresses.has(addr) && current[addr] && current[addr] !== defaults[addr]) {
+        list.push({ addr, name: current[addr], original: defaults[addr] || '(default)' });
+      }
+    });
+    return list;
+  }, [symbolsMap, activeSandbox, currentRungs]);
 
   const setCurrentRungs = (newRungs) => {
     const resolvedRungs = typeof newRungs === 'function' ? newRungs(currentRungs) : newRungs;
@@ -290,6 +330,11 @@ export function App() {
     setScanResult(null);
   };
 
+  const handleExplicitResetRun = () => {
+    handleResetMemory();
+    showBanner("Run state reset: switches, coils, and timers set to 0. Ladder logic preserved.");
+  };
+
   const handleToggleRun = () => {
     setShowRunHint(false);
     if (isRunning) {
@@ -380,7 +425,7 @@ export function App() {
       <Header
         isRunning={isRunning}
         onToggleRun={handleToggleRun}
-        onResetMemory={handleResetMemory}
+        onResetMemory={handleExplicitResetRun}
         onOpenFullResetModal={() => setIsFullResetModalOpen(true)}
         onUndo={handleUndo}
         onRedo={handleRedo}
@@ -535,83 +580,115 @@ export function App() {
 
       {/* Full Simulation Reset Confirmation Modal */}
       {isFullResetModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-slate-900 border-2 border-red-500/80 rounded-2xl p-6 shadow-2xl max-w-md w-full space-y-4 text-slate-100">
-            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
-              <div className="p-2 rounded-lg bg-red-950/60 border border-red-500/40 text-red-400">
-                <AlertTriangle className="w-5 h-5" />
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 shadow-2xl max-w-md w-full space-y-4 text-slate-100 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
+              <div className="p-2.5 rounded-xl bg-cyan-950/50 border border-cyan-500/30 text-cyan-400">
+                <RotateCcw className="w-5 h-5" />
               </div>
-              <div>
-                <h3 className="text-base font-bold text-white">Confirm Full Simulation Reset</h3>
-                <p className="text-xs text-slate-400">Environment: {activeSandbox === 'MetalShear' ? 'Metal Shear Station' : 'Hardware Trainer'}</p>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-white">Full Simulation Reset</h3>
+                <p className="text-xs text-slate-400">
+                  Environment: <strong className="text-slate-300">{activeSandbox === 'MetalShear' ? 'Metal Shear Station' : 'Hardware Trainer'}</strong>
+                </p>
               </div>
+              <button
+                onClick={() => setIsFullResetModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              This will completely wipe your current simulation state, deleting your rungs, resetting all PLC data tables &amp; switches to 0, and reverting all custom variable names.
+              This will completely wipe your current workspace, clearing all ladder rungs, resetting all PLC data tables &amp; switches to 0, and reverting your custom variable names to defaults.
             </p>
 
-            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs">
-              <div className="font-bold text-slate-200 flex items-center gap-1.5">
-                <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                <span>The following will be deleted:</span>
+            {/* Summary of what will be reset */}
+            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-2.5 text-xs">
+              <div className="font-bold text-slate-200 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Trash2 className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Items to be cleared:</span>
+                </span>
+                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-1.5 py-0.5 rounded">
+                  Full Wipe
+                </span>
               </div>
-              <ul className="space-y-1.5 pl-2 text-slate-300 font-mono text-[11px]">
+              <ul className="space-y-1.5 pl-1 text-slate-300 font-mono text-[11px]">
                 <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                  <span><strong>{currentRungs.length}</strong> Ladder Logic rung(s)</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                  <span><strong>{currentRungs.length}</strong> Ladder Logic rung(s) &rarr; reset to 1 blank starter rung</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                  <span>PLC Memory (Timers, Coils, Registers N7, Relays B3, Switches)</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                  <span>PLC Memory (Timers, Coils, Registers, Relays, Switches) &rarr; set to 0</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0 mt-1" />
-                  <div>
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0 mt-1" />
+                  <div className="flex-1">
                     <span><strong>{customVariablesList.length}</strong> Custom Variable Name(s):</span>
                     {customVariablesList.length > 0 ? (
-                      <div className="max-h-24 overflow-y-auto mt-1 space-y-0.5 pr-1">
+                      <div className="max-h-24 overflow-y-auto mt-1 space-y-1 pr-1">
                         {customVariablesList.map(v => (
-                          <div key={v.addr} className="text-[10px] text-cyan-300 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
-                            {v.addr}: &quot;{v.name}&quot; &rarr; resets to &quot;{v.original}&quot;
+                          <div key={v.addr} className="text-[10px] text-cyan-300 bg-slate-900 px-2 py-1 rounded border border-slate-800 flex items-center justify-between">
+                            <span className="font-bold font-mono">{v.addr}:</span>
+                            <span className="text-slate-200">&quot;{v.name}&quot;</span>
+                            <span className="text-slate-400 font-mono text-[9px]">&rarr; &quot;{v.original}&quot;</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-[10px] text-slate-400 italic">No custom names set (default tags in use)</div>
+                      <div className="text-[10px] text-slate-400 italic mt-0.5">No custom names modified in current project</div>
                     )}
                   </div>
                 </li>
               </ul>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-500/30 flex items-center justify-between text-xs">
-              <span className="text-cyan-200">Want to restore your work later?</span>
+            {/* Export First reminder */}
+            <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between text-xs">
+              <span className="text-slate-300 text-[11px]">Want to save a copy before wiping?</span>
               <button
                 type="button"
                 onClick={handleExportProgram}
-                className="px-2.5 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] flex items-center gap-1 transition cursor-pointer shadow-sm"
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-bold text-[11px] flex items-center gap-1.5 transition cursor-pointer shadow-sm"
               >
-                <Download className="w-3.5 h-3.5" />
-                Export First
+                <Download className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Export Backup</span>
               </button>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsFullResetModalOpen(false)}
-                className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:bg-slate-800 transition cursor-pointer"
+                className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
+                onClick={() => {
+                  setIsFullResetModalOpen(false);
+                  handleExplicitResetRun();
+                }}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 transition cursor-pointer flex items-center gap-1.5"
+                title="Only reset switches, energized coils, and timers; keeps your rungs and tags intact"
+              >
+                <RotateCcw className="w-3 h-3 text-cyan-400" />
+                <span>Just Reset Run (Keep Code)</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleConfirmFullReset}
-                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition cursor-pointer shadow-lg shadow-red-950/50 flex items-center gap-1.5"
+                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition cursor-pointer shadow-md flex items-center gap-1.5"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Confirm Simulation Reset
+                <span>Confirm Full Reset</span>
               </button>
             </div>
           </div>
