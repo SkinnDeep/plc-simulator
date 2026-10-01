@@ -156,6 +156,9 @@
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--signal, var(--line)) 28%, transparent);
   background: color-mix(in srgb, var(--signal, var(--raised)) 6%, var(--surface));
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   transition: all 160ms ease;
 }
 .io-cell:hover {
@@ -200,7 +203,19 @@
   background: radial-gradient(circle at 40% 40%, #ffffff, var(--signal));
   box-shadow: 0 0 20px var(--signal), inset 0 0 8px #ffffff;
 }
-.switch-control { height: 42px; width: 50px; display: grid; place-items: center; border-radius: 8px; touch-action: none; background: transparent; border: 0; }
+.switch-control {
+  height: 42px;
+  width: 50px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  background: transparent;
+  border: 0;
+}
 .switch-track { width: 40px; height: 23px; border-radius: 20px; background: var(--raised); border: 1.5px solid var(--line-strong); padding: 2px; display: flex; align-items: center; transition: all 160ms; }
 .switch-track > span { width: 16px; height: 16px; border-radius: 50%; background: #a6aab3; box-shadow: 0 1px 2px #0004; transition: transform 180ms cubic-bezier(.2,.8,.2,1),background-color 160ms; }
 .switch-control[aria-pressed="true"] .switch-track { background: #10b981; border-color: #34d399; box-shadow: 0 0 10px rgba(16, 185, 129, 0.45); }
@@ -213,6 +228,9 @@
   place-items: center;
   border-radius: 7px;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   border: 1.5px solid color-mix(in srgb, var(--signal) 65%, #000);
   background: color-mix(in srgb, var(--signal) 28%, var(--surface));
   color: #fff;

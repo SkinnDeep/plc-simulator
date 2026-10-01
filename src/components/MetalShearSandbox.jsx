@@ -120,24 +120,83 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
     return () => cancelAnimationFrame(animFrame);
   }, [isRunning, conv1On, conv2On, bladeDown]);
 
-  const [activePress, setActivePress] = useState(null);
+  // Multitouch pointer tracking: maps pointerId -> 'START' | 'STOP'
+  const pointerMap = useRef(new Map());
+  const pressedMap = useRef(new Map());
+
+  const pressButton = (pointerId, action) => {
+    pointerMap.current.set(pointerId, action);
+    if (!pressedMap.current.has(action)) {
+      pressedMap.current.set(action, new Set());
+    }
+    const set = pressedMap.current.get(action);
+    set.add(pointerId);
+    if (set.size === 1) {
+      if (action === 'START') {
+        onToggleInputRef.current('I:0/0', true);
+      } else if (action === 'STOP') {
+        onToggleInputRef.current('I:0/1', false); // Stop is N.C. so pressing breaks circuit
+      }
+    }
+  };
+
+  const releaseButton = (pointerId, specificAction) => {
+    const action = specificAction || pointerMap.current.get(pointerId);
+    if (pointerId !== undefined) {
+      pointerMap.current.delete(pointerId);
+    }
+    if (!action) return;
+
+    const set = pressedMap.current.get(action);
+    if (set) {
+      if (pointerId !== undefined) {
+        set.delete(pointerId);
+      } else {
+        set.clear();
+      }
+      if (set.size === 0) {
+        pressedMap.current.delete(action);
+        if (action === 'START') {
+          onToggleInputRef.current('I:0/0', false);
+        } else if (action === 'STOP') {
+          onToggleInputRef.current('I:0/1', true); // Stop is N.C. so releasing restores circuit
+        }
+      }
+    }
+  };
+
+  const releaseAllButtons = () => {
+    pointerMap.current.clear();
+    if (pressedMap.current.has('START')) {
+      onToggleInputRef.current('I:0/0', false);
+    }
+    if (pressedMap.current.has('STOP')) {
+      onToggleInputRef.current('I:0/1', true);
+    }
+    pressedMap.current.clear();
+  };
 
   useEffect(() => {
-    const handleGlobalRelease = () => {
-      if (activePress === 'START') {
-        onToggleInputRef.current('I:0/0', false);
-      } else if (activePress === 'STOP') {
-        onToggleInputRef.current('I:0/1', true); // Stop is N.C. so release means ON
+    const onWindowPointerUp = (e) => {
+      if (pointerMap.current.has(e.pointerId)) {
+        releaseButton(e.pointerId);
       }
-      setActivePress(null);
     };
-    window.addEventListener('mouseup', handleGlobalRelease);
-    window.addEventListener('touchend', handleGlobalRelease);
+    const onWindowBlur = () => releaseAllButtons();
+    const onVisibilityChange = () => { if (document.hidden) releaseAllButtons(); };
+
+    window.addEventListener('pointerup', onWindowPointerUp);
+    window.addEventListener('pointercancel', onWindowPointerUp);
+    window.addEventListener('blur', onWindowBlur);
+    document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
-      window.removeEventListener('mouseup', handleGlobalRelease);
-      window.removeEventListener('touchend', handleGlobalRelease);
+      window.removeEventListener('pointerup', onWindowPointerUp);
+      window.removeEventListener('pointercancel', onWindowPointerUp);
+      window.removeEventListener('blur', onWindowBlur);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      releaseAllButtons();
     };
-  }, [activePress]);
+  }, []);
 
   // Init N.C. Stop Button to TRUE on mount
   const isInitialized = useRef(false);
@@ -148,8 +207,8 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
     }
   }, []);
 
-  const isStartPressed = activePress === 'START' || isBitOn('I:0/0');
-  const isStopPressed = activePress === 'STOP' || !isBitOn('I:0/1');
+  const isStartPressed = isBitOn('I:0/0');
+  const isStopPressed = !isBitOn('I:0/1');
 
   return (
     <div id="tour-trainer" className="hardware-trainer metal-shear-trainer select-none">
@@ -334,8 +393,28 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
               aria-label="Start Pushbutton (N.O.)"
               aria-pressed={isStartPressed}
               title="START Pushbutton (I:0/0) — Normally Open. Press and hold"
-              onMouseDown={() => { setActivePress('START'); onToggleInput('I:0/0', true); }}
-              onTouchStart={() => { setActivePress('START'); onToggleInput('I:0/0', true); }}
+              onPointerDown={e => {
+                if (e.button !== undefined && e.button !== 0) return;
+                e.preventDefault();
+                try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+                pressButton(e.pointerId, 'START');
+              }}
+              onPointerUp={e => releaseButton(e.pointerId, 'START')}
+              onPointerCancel={e => releaseButton(e.pointerId, 'START')}
+              onLostPointerCapture={e => releaseButton(e.pointerId, 'START')}
+              onKeyDown={e => {
+                if ([' ', 'Enter'].includes(e.key)) {
+                  e.preventDefault();
+                  if (!e.repeat) pressButton(`key_${e.key}`, 'START');
+                }
+              }}
+              onKeyUp={e => {
+                if ([' ', 'Enter'].includes(e.key)) {
+                  e.preventDefault();
+                  releaseButton(`key_${e.key}`, 'START');
+                }
+              }}
+              onBlur={() => releaseButton(undefined, 'START')}
             >
               <span>START</span>
             </button>
@@ -353,8 +432,28 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
               aria-label="Stop Pushbutton (N.C.)"
               aria-pressed={isStopPressed}
               title="STOP Pushbutton (I:0/1) — Normally Closed. Press to break circuit"
-              onMouseDown={() => { setActivePress('STOP'); onToggleInput('I:0/1', false); }}
-              onTouchStart={() => { setActivePress('STOP'); onToggleInput('I:0/1', false); }}
+              onPointerDown={e => {
+                if (e.button !== undefined && e.button !== 0) return;
+                e.preventDefault();
+                try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+                pressButton(e.pointerId, 'STOP');
+              }}
+              onPointerUp={e => releaseButton(e.pointerId, 'STOP')}
+              onPointerCancel={e => releaseButton(e.pointerId, 'STOP')}
+              onLostPointerCapture={e => releaseButton(e.pointerId, 'STOP')}
+              onKeyDown={e => {
+                if ([' ', 'Enter'].includes(e.key)) {
+                  e.preventDefault();
+                  if (!e.repeat) pressButton(`key_${e.key}`, 'STOP');
+                }
+              }}
+              onKeyUp={e => {
+                if ([' ', 'Enter'].includes(e.key)) {
+                  e.preventDefault();
+                  releaseButton(`key_${e.key}`, 'STOP');
+                }
+              }}
+              onBlur={() => releaseButton(undefined, 'STOP')}
             >
               <span>STOP</span>
             </button>

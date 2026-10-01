@@ -10,29 +10,75 @@ const LAMPS = [
 
 export function HardwareTrainer({ plcData, onToggleInput, isRunning, symbols }) {
   const isBitOn = addr => !!plcData?.bits?.[addr];
-  const pressed = useRef(new Set());
+
+  // Multitouch tracking: maps pointerId -> address, and address -> Set of active pointerIds
+  const pointerToAddr = useRef(new Map());
+  const addrToPointers = useRef(new Map());
+
   const toggleRef = useRef(onToggleInput);
   toggleRef.current = onToggleInput;
-  const release = addr => {
-    if (pressed.current.delete(addr)) toggleRef.current(addr, false);
+
+  const press = (pointerId, addr) => {
+    pointerToAddr.current.set(pointerId, addr);
+    if (!addrToPointers.current.has(addr)) {
+      addrToPointers.current.set(addr, new Set());
+    }
+    const set = addrToPointers.current.get(addr);
+    set.add(pointerId);
+    if (set.size === 1) {
+      toggleRef.current(addr, true);
+    }
   };
-  const press = addr => {
-    if (!pressed.current.has(addr)) { pressed.current.add(addr); toggleRef.current(addr, true); }
+
+  const release = (pointerId, specificAddr) => {
+    const addr = specificAddr || pointerToAddr.current.get(pointerId);
+    if (pointerId !== undefined) {
+      pointerToAddr.current.delete(pointerId);
+    }
+    if (!addr) return;
+
+    const set = addrToPointers.current.get(addr);
+    if (set) {
+      if (pointerId !== undefined) {
+        set.delete(pointerId);
+      } else {
+        set.clear();
+      }
+      if (set.size === 0) {
+        addrToPointers.current.delete(addr);
+        toggleRef.current(addr, false);
+      }
+    }
   };
+
+  const releaseAll = () => {
+    pointerToAddr.current.clear();
+    for (const [addr, set] of addrToPointers.current.entries()) {
+      if (set.size > 0) {
+        toggleRef.current(addr, false);
+      }
+    }
+    addrToPointers.current.clear();
+  };
+
   useEffect(() => {
-    const releaseAll = () => {
-      for (const addr of pressed.current) toggleRef.current(addr, false);
-      pressed.current.clear();
+    const onWindowPointerUp = (e) => {
+      // ONLY release the specific pointer that was lifted, preserving other active touches!
+      if (pointerToAddr.current.has(e.pointerId)) {
+        release(e.pointerId);
+      }
     };
+    const onWindowBlur = () => releaseAll();
     const onVisibility = () => { if (document.hidden) releaseAll(); };
-    window.addEventListener('pointerup', releaseAll);
-    window.addEventListener('pointercancel', releaseAll);
-    window.addEventListener('blur', releaseAll);
+
+    window.addEventListener('pointerup', onWindowPointerUp);
+    window.addEventListener('pointercancel', onWindowPointerUp);
+    window.addEventListener('blur', onWindowBlur);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
-      window.removeEventListener('pointerup', releaseAll);
-      window.removeEventListener('pointercancel', releaseAll);
-      window.removeEventListener('blur', releaseAll);
+      window.removeEventListener('pointerup', onWindowPointerUp);
+      window.removeEventListener('pointercancel', onWindowPointerUp);
+      window.removeEventListener('blur', onWindowBlur);
       document.removeEventListener('visibilitychange', onVisibility);
       releaseAll();
     };
@@ -67,18 +113,55 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning, symbols }) 
             const active = isBitOn(addr);
             return <div className={`io-cell ${active ? 'active-cell' : ''}`} key={addr} style={{ '--signal': active ? '#10b981' : '#64748b' }}>
               <span className="io-address">{addr}</span>
-              <button className="switch-control" aria-label={`Switch ${index + 1}`} aria-pressed={active} onClick={() => onToggleInput(addr, !active)} title={`Toggle Switch ${index + 1} (${addr})`}><span className="switch-track"><span /></span></button>
+              <button
+                className="switch-control"
+                aria-label={`Switch ${index + 1}`}
+                aria-pressed={active}
+                onClick={() => onToggleInput(addr, !active)}
+                onPointerDown={(e) => {
+                  if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+                    e.preventDefault();
+                    onToggleInput(addr, !active);
+                  }
+                }}
+                title={`Toggle Switch ${index + 1} (${addr})`}
+              >
+                <span className="switch-track"><span /></span>
+              </button>
               <span className="io-name">Switch {index + 1}</span>
               <span className={`io-value ${active ? 'on' : ''}`}><i />{active ? 'On' : 'Off'}<b>{active ? '1' : '0'}</b></span>
             </div>;
           })}
           {[{addr:'I:0/2', label:'Start', name:'Green start pushbutton', color:'#10b981'}, {addr:'I:0/3', label:'Stop', name:'Red stop pushbutton', color:'#ef4444'}].map(pb => <div className={`io-cell ${isBitOn(pb.addr) ? 'active-cell' : ''}`} key={pb.addr} style={{'--signal':pb.color}}>
             <span className="io-address">{pb.addr}</span>
-            <button className="momentary-control" aria-label={pb.name} aria-pressed={isBitOn(pb.addr)} title={`${pb.label} (${pb.addr}) — press and hold`}
-              onPointerDown={e => { if (e.button !== 0) return; e.currentTarget.setPointerCapture(e.pointerId); press(pb.addr); }}
-              onPointerUp={() => release(pb.addr)} onPointerCancel={() => release(pb.addr)} onLostPointerCapture={() => release(pb.addr)}
-              onKeyDown={e => { if ([' ', 'Enter'].includes(e.key)) { e.preventDefault(); if (!e.repeat) press(pb.addr); } }}
-              onKeyUp={e => { if ([' ', 'Enter'].includes(e.key)) { e.preventDefault(); release(pb.addr); } }} onBlur={() => release(pb.addr)}>
+            <button
+              className={`momentary-control ${isBitOn(pb.addr) ? 'pressed' : ''}`}
+              aria-label={pb.name}
+              aria-pressed={isBitOn(pb.addr)}
+              title={`${pb.label} (${pb.addr}) — press and hold`}
+              onPointerDown={e => {
+                if (e.button !== undefined && e.button !== 0) return;
+                e.preventDefault();
+                try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+                press(e.pointerId, pb.addr);
+              }}
+              onPointerUp={e => release(e.pointerId, pb.addr)}
+              onPointerCancel={e => release(e.pointerId, pb.addr)}
+              onLostPointerCapture={e => release(e.pointerId, pb.addr)}
+              onKeyDown={e => {
+                if ([' ', 'Enter'].includes(e.key)) {
+                  e.preventDefault();
+                  if (!e.repeat) press(`key_${e.key}_${pb.addr}`, pb.addr);
+                }
+              }}
+              onKeyUp={e => {
+                if ([' ', 'Enter'].includes(e.key)) {
+                  e.preventDefault();
+                  release(`key_${e.key}_${pb.addr}`, pb.addr);
+                }
+              }}
+              onBlur={() => release(undefined, pb.addr)}
+            >
               <span>{pb.label}</span>
             </button>
             <span className="io-name">{pb.label}</span>
