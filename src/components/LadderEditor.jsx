@@ -97,7 +97,7 @@ export function LadderEditor({
     const traverse = (items) => {
       if (!items) return;
       for (const item of items) {
-        if (item.type === 'TON' || item.type === 'RES') {
+        if (['TON', 'TOF', 'RTO', 'RES'].includes(item.type)) {
           if (item.operand && /^T4:\d+$/i.test(item.operand)) {
             set.add(item.operand.toUpperCase());
           }
@@ -176,7 +176,7 @@ export function LadderEditor({
     if (type === 'BRANCH') {
       return item.isOutputBranch === true;
     }
-    return ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(type);
+    return ['OTE', 'OTL', 'OTU', 'TON', 'TOF', 'RTO', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(type);
   };
 
   // Add instruction (from palette click or drop)
@@ -193,7 +193,7 @@ export function LadderEditor({
         operand = 'N7:0';
       } else if (['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(type)) {
         operand = 'N7:0';
-      } else if (type === 'TON' || type === 'RES') {
+      } else if (['TON', 'TOF', 'RTO', 'RES'].includes(type)) {
         operand = 'T4:0';
       } else {
         operand = isOutput ? 'O:0/0' : 'I:0/0';
@@ -201,7 +201,7 @@ export function LadderEditor({
     }
 
     let params = {};
-    if (type === 'TON') params = { pre: 2.0, timeBase: 1.0 };
+    if (['TON', 'TOF', 'RTO'].includes(type)) params = { pre: 2.0, timeBase: 1.0 };
     else if (['ADD', 'SUB', 'MUL', 'DIV'].includes(type)) {
       params = { sourceA: 'N7:0', sourceB: '1', dest: 'N7:1' };
     } else if (type === 'MOV') {
@@ -394,7 +394,7 @@ export function LadderEditor({
           extra = { params: { sourceA: 'N7:0', sourceB: '1', dest: 'N7:1' } };
         } else if (data.type === 'MOV') {
           extra = { params: { source: 'N7:0', dest: 'N7:1' } };
-        } else if (data.type === 'TON') {
+        } else if (['TON', 'TOF', 'RTO'].includes(data.type)) {
           extra = { params: { pre: 2.0, timeBase: 1.0 } };
         }
         handleAddInstructionToBranchPath(rungIdx, branchId, pathIdx, data.type, extra, data.operand || null);
@@ -777,7 +777,7 @@ export function LadderEditor({
               extra = { params: { sourceA: 'N7:0', sourceB: '1', dest: 'N7:1' } };
             } else if (type === 'MOV') {
               extra = { params: { source: 'N7:0', dest: 'N7:1' } };
-            } else if (type === 'TON') {
+            } else if (['TON', 'TOF', 'RTO'].includes(type)) {
               extra = { params: { pre: 2.0, timeBase: 1.0 } };
             }
             const updates = { type, ...extra };
@@ -1242,7 +1242,7 @@ export function LadderEditor({
   
                                       {path.map(subItem => (
                                         <React.Fragment key={subItem.id}>
-                                          {subItem.type === 'TON' ? (
+                                          {['TON', 'TOF', 'RTO'].includes(subItem.type) ? (
                                             <TimerInstructionBlock
                                               item={subItem}
                                               isSelected={selectedItemId === subItem.id}
@@ -1346,7 +1346,7 @@ export function LadderEditor({
                               isOutputZone={true}
                             />
                             <div className="relative group mx-1">
-                              {item.type === 'TON' ? (
+                              {['TON', 'TOF', 'RTO'].includes(item.type) ? (
                                 <TimerInstructionBlock
                                   item={item}
                                   isSelected={selectedItemId === item.id}
@@ -1598,7 +1598,7 @@ function ItemDeleteButton({ isVisible, onDelete, title = "Delete instruction" })
 // Minimalist ISA-101 Industrial Instruction Card
 function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onUpdate, onDelete, symbols, onDropItem, isOutputZone = false }) {
   const { hoverTrash, handleMouseEnter, handleMouseLeave } = useHoverTrash();
-  const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
+  const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'TOF', 'RTO', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
   const color = isActive 
     ? 'text-emerald-400 font-black drop-shadow-[0_0_8px_#10b981]' 
     : isOutput 
@@ -1676,7 +1676,7 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         {item.type === 'OTE' && '-( )-'}
         {item.type === 'OTL' && '-(L)-'}
         {item.type === 'OTU' && '-(U)-'}
-        {item.type === 'TON' && '[TON]'}
+        {['TON', 'TOF', 'RTO'].includes(item.type) && `[${item.type}]`}
         {item.type === 'RES' && '-(RES)-'}
         {['ONS', 'OSR', 'OSF', 'MOV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type) && `[${item.type}]`}
       </div>
@@ -1781,6 +1781,12 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
   const ttActive = liveTimer ? liveTimer.TT : false;
   const dnActive = liveTimer ? liveTimer.DN : false;
   
+  const getTimerDesc = (t) => {
+    if (t === 'TOF') return 'Timer Off Delay';
+    if (t === 'RTO') return 'Retentive Timer On';
+    return 'Timer On Delay';
+  };
+
   return (
     <div
       draggable
@@ -1800,8 +1806,21 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
       className={`flex flex-col border-2 ${isActive ? 'border-emerald-500/60 bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.2)]' : 'border-purple-500/40 bg-purple-950/20 shadow-md'} rounded overflow-hidden select-none relative cursor-pointer min-w-[140px] mx-2 ${isSelected ? 'ring-2 ring-purple-400' : ''}`}
     >
       <div className={`${bgHeader} px-2 py-1 border-b ${borderColor} flex justify-between items-center`}>
-        <span className={`text-[10px] font-bold ${color}`}>TON</span>
-        <span className="text-[9px] text-slate-400 font-mono ml-2">Timer On Delay</span>
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[10px] font-bold ${color}`}>{item.type || 'TON'}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const next = item.type === 'TON' ? 'RTO' : item.type === 'RTO' ? 'TOF' : 'TON';
+              onUpdate({ type: next });
+            }}
+            className="text-[8px] font-mono px-1 py-0.2 rounded bg-purple-950/40 text-purple-300 hover:bg-purple-900/60 border border-purple-500/30 cursor-pointer"
+            title="Click to cycle timer type (TON -> RTO -> TOF)"
+          >
+            switch
+          </button>
+        </div>
+        <span className="text-[9px] text-slate-400 font-mono ml-2">{getTimerDesc(item.type)}</span>
       </div>
       
       <div className="flex">

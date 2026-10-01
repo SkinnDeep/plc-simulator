@@ -36,7 +36,9 @@ export function InstructionPalette({
 
   const timerIcons = [
     { type: 'TON', symbol: '[TON]', name: 'Timer On Delay', isOutput: true },
-    { type: 'RES', symbol: '-(RES)-', name: 'Reset', isOutput: true },
+    { type: 'TOF', symbol: '[TOF]', name: 'Timer Off Delay', isOutput: true },
+    { type: 'RTO', symbol: '[RTO]', name: 'Retentive Timer On', isOutput: true },
+    { type: 'RES', symbol: '-(RES)-', name: 'Reset Timer', isOutput: true },
   ];
 
   const mathIcons = [
@@ -77,7 +79,7 @@ export function InstructionPalette({
     if (inst.isOutput || ['OTE', 'OTL', 'OTU'].includes(inst.type)) {
       return 'border-amber-500/30 bg-amber-950/20 text-amber-300 hover:border-amber-400 hover:bg-amber-900/40 hover:text-amber-200';
     }
-    if (['TON', 'RES'].includes(inst.type)) {
+    if (['TON', 'TOF', 'RTO', 'RES'].includes(inst.type)) {
       return 'border-purple-500/30 bg-purple-950/20 text-purple-300 hover:border-purple-400 hover:bg-purple-900/40 hover:text-purple-200';
     }
     if (['ADD', 'SUB', 'MUL', 'DIV'].includes(inst.type)) {

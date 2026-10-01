@@ -12,6 +12,8 @@ export const INSTRUCTION_TYPES = {
   OTL: 'OTL', // Output Latch -(L)-
   OTU: 'OTU', // Output Unlatch -(U)-
   TON: 'TON', // Timer On Delay
+  TOF: 'TOF', // Timer Off Delay
+  RTO: 'RTO', // Retentive Timer On
   RES: 'RES', // Reset Timer
   EQU: 'EQU', // Equal
   NEQ: 'NEQ', // Not Equal
@@ -36,7 +38,9 @@ export const INSTRUCTION_METADATA = {
   OTL: { name: 'OTL', symbol: '-(L)-', desc: 'Latch Output (Stays ON)', category: 'Bit', isOutput: true },
   OTU: { name: 'OTU', symbol: '-(U)-', desc: 'Unlatch Output (Turns OFF)', category: 'Bit', isOutput: true },
   TON: { name: 'TON', symbol: '[TON]', desc: 'Timer On Delay', category: 'Timer', isBlock: true, isOutput: true },
-  RES: { name: 'RES', symbol: '-(RES)-', desc: 'Reset Timer', category: 'Timer', isOutput: true },
+  TOF: { name: 'TOF', symbol: '[TOF]', desc: 'Timer Off Delay', category: 'Timer', isBlock: true, isOutput: true },
+  RTO: { name: 'RTO', symbol: '[RTO]', desc: 'Retentive Timer On Delay (Retains ACC on rung false)', category: 'Timer', isBlock: true, isOutput: true },
+  RES: { name: 'RES', symbol: '-(RES)-', desc: 'Reset Timer (Clears ACC and DN)', category: 'Timer', isOutput: true },
   EQU: { name: 'EQU', symbol: '[EQU]', desc: 'Equal (Source A == Source B)', category: 'Compare', isBlock: true },
   NEQ: { name: 'NEQ', symbol: '[NEQ]', desc: 'Not Equal (Source A != Source B)', category: 'Compare', isBlock: true },
   LES: { name: 'LES', symbol: '[LES]', desc: 'Less Than (Source A < Source B)', category: 'Compare', isBlock: true },

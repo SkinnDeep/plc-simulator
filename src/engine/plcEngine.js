@@ -156,9 +156,11 @@ export class PLCEngine {
   }
 
   // Execute authentic 4-phase scan cycle
-  executeScanCycle(forceRungs = null) {
+  executeScanCycle(forceRungs = null, dtOverrideSeconds = null) {
     const t0 = performance.now();
-    const dtSeconds = Math.max(0, (t0 - this.lastScanTime) / 1000);
+    const dtSeconds = dtOverrideSeconds !== null && Number.isFinite(dtOverrideSeconds)
+      ? Math.max(0, Number(dtOverrideSeconds))
+      : Math.max(0, (t0 - this.lastScanTime) / 1000);
     this.lastScanTime = t0;
 
     const rungs = forceRungs || this.currentRungs || [];
@@ -363,6 +365,85 @@ export class PLCEngine {
           timer.DN = false;
           timer.ACC = 0;
           timer._elapsed = 0;
+        }
+        active = timer.DN;
+        powerOut = powerIn;
+        break;
+      }
+
+      case 'RTO': {
+        // Retentive Timer On Delay
+        // Retains ACC and DN state when rung goes false; only RES clears ACC and DN.
+        const match = operand.match(/^T4:(\d+)$/);
+        const timer = match && this.data.T4[Number(match[1])];
+        if (!timer) break;
+
+        if (params.timeBase !== undefined) timer.timeBase = Number(params.timeBase);
+        if (params.pre !== undefined && Number.isFinite(Number(params.pre)) && Number(params.pre) >= 0) timer.PRE = Number(params.pre);
+
+        if (timer._elapsed === undefined) timer._elapsed = (timer.ACC || 0) * timer.timeBase;
+
+        if (powerIn) {
+          timer.EN = true;
+          if (timer.ACC < timer.PRE) {
+            timer.TT = true;
+            timer.DN = false;
+            timer._elapsed += dtSeconds;
+            timer.ACC = Math.floor(timer._elapsed / timer.timeBase);
+            if (timer.ACC >= timer.PRE) {
+              timer.ACC = timer.PRE;
+              timer.TT = false;
+              timer.DN = true;
+            }
+          } else {
+            timer.TT = false;
+            timer.DN = true;
+          }
+        } else {
+          // When rung is false, EN and TT drop, but ACC and DN remain retained!
+          timer.EN = false;
+          timer.TT = false;
+        }
+        active = timer.DN;
+        powerOut = powerIn;
+        break;
+      }
+
+      case 'TOF': {
+        // Timer Off Delay
+        // Rung true: EN=1, TT=0, DN=1, ACC=0.
+        // Rung false: EN=0, TT=1, DN=1 until ACC >= PRE, then TT=0, DN=0.
+        const match = operand.match(/^T4:(\d+)$/);
+        const timer = match && this.data.T4[Number(match[1])];
+        if (!timer) break;
+
+        if (params.timeBase !== undefined) timer.timeBase = Number(params.timeBase);
+        if (params.pre !== undefined && Number.isFinite(Number(params.pre)) && Number(params.pre) >= 0) timer.PRE = Number(params.pre);
+
+        if (timer._elapsed === undefined) timer._elapsed = 0;
+
+        if (powerIn) {
+          timer.EN = true;
+          timer.TT = false;
+          timer.DN = true;
+          timer.ACC = 0;
+          timer._elapsed = 0;
+        } else {
+          timer.EN = false;
+          if (timer.ACC < timer.PRE) {
+            timer.TT = true;
+            timer.DN = true;
+            timer._elapsed += dtSeconds;
+            timer.ACC = Math.floor(timer._elapsed / timer.timeBase);
+            if (timer.ACC >= timer.PRE) {
+              timer.ACC = timer.PRE;
+              timer.TT = false;
+              timer.DN = false;
+            }
+          } else {
+            timer.TT = false;
+            timer.DN = false;
+          }
         }
         active = timer.DN;
         powerOut = powerIn;

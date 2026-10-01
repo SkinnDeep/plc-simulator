@@ -172,3 +172,80 @@ test('timer status contacts (DN, EN, TT) map to timers and evaluate accurately',
   assert.equal(e.getBit('O:0/3'), false, 'T4:1.DN is false so O:0/3 is false');
 });
 
+test('RTO (Retentive Timer On) accumulates time, retains ACC on false rung, and resets with RES', () => {
+  const e = engine();
+  const rungs = [
+    rung(ins('XIC', 'I:0/0'), ins('RTO', 'T4:0', { pre: 3, timeBase: 1.0 })),
+    rung(ins('XIC', 'T4:0.DN'), ins('OTE', 'O:0/0')),
+    rung(ins('XIC', 'I:0/1'), ins('RES', 'T4:0'))
+  ];
+
+  // Turn ON input for 1.5 seconds (accumulate 1s)
+  e.setBit('I:0/0', true);
+  e.executeScanCycle(rungs, 1.5);
+  assert.equal(e.data.T4[0].ACC, 1, 'RTO ACC accumulated to 1');
+  assert.equal(e.data.T4[0].DN, false, 'RTO not done yet');
+  assert.equal(e.getBit('O:0/0'), false, 'O:0/0 is false');
+
+  // Turn OFF input: ACC must be retained!
+  e.setBit('I:0/0', false);
+  e.executeScanCycle(rungs, 2.0);
+  assert.equal(e.data.T4[0].ACC, 1, 'RTO ACC retained at 1 when rung goes false');
+  assert.equal(e.data.T4[0].EN, false, 'RTO EN is false');
+  assert.equal(e.data.T4[0].TT, false, 'RTO TT is false');
+
+  // Turn ON input again: resumes counting from 1s to 3s!
+  e.setBit('I:0/0', true);
+  e.executeScanCycle(rungs, 2.0); // 1.5s + 2.0s = 3.5s -> ACC reaches 3 (PRE)
+  assert.equal(e.data.T4[0].ACC, 3, 'RTO reached preset of 3');
+  assert.equal(e.data.T4[0].DN, true, 'RTO DN bit is now true');
+  assert.equal(e.getBit('O:0/0'), true, 'O:0/0 energized by RTO DN bit');
+
+  // Turn OFF input: DN and ACC are STILL retained!
+  e.setBit('I:0/0', false);
+  e.executeScanCycle(rungs, 1.0);
+  assert.equal(e.data.T4[0].DN, true, 'RTO DN bit retained true when rung is false');
+  assert.equal(e.getBit('O:0/0'), true, 'O:0/0 remains true');
+
+  // Energize RES instruction: resets RTO to 0!
+  e.setBit('I:0/1', true);
+  e.executeScanCycle(rungs, 0.1);
+  assert.equal(e.data.T4[0].ACC, 0, 'RES reset RTO ACC to 0');
+  assert.equal(e.data.T4[0].DN, false, 'RES cleared RTO DN');
+  // On the next scan, rung with T4:0.DN sees DN=false and turns O:0/0 OFF
+  e.executeScanCycle(rungs, 0.1);
+  assert.equal(e.getBit('O:0/0'), false, 'O:0/0 turns OFF after reset');
+});
+
+test('TOF (Timer Off Delay) energizes DN immediately on true rung and delays turning off', () => {
+  const e = engine();
+  const rungs = [
+    rung(ins('XIC', 'I:0/0'), ins('TOF', 'T4:1', { pre: 2, timeBase: 1.0 })),
+    rung(ins('XIC', 'T4:1.DN'), ins('OTE', 'O:0/1'))
+  ];
+
+  // Rung true: DN immediately turns ON, ACC is 0
+  e.setBit('I:0/0', true);
+  e.executeScanCycle(rungs, 0.1);
+  assert.equal(e.data.T4[1].EN, true, 'TOF EN is true');
+  assert.equal(e.data.T4[1].DN, true, 'TOF DN is true while rung is true');
+  assert.equal(e.data.T4[1].ACC, 0, 'TOF ACC is 0 while rung is true');
+  assert.equal(e.getBit('O:0/1'), true, 'O:0/1 is true');
+
+  // Rung false: timer starts timing off delay! DN stays true during delay!
+  e.setBit('I:0/0', false);
+  e.executeScanCycle(rungs, 1.0);
+  assert.equal(e.data.T4[1].EN, false, 'TOF EN is false when rung is false');
+  assert.equal(e.data.T4[1].TT, true, 'TOF TT is true during off-delay');
+  assert.equal(e.data.T4[1].DN, true, 'TOF DN remains true during off-delay');
+  assert.equal(e.getBit('O:0/1'), true, 'O:0/1 remains on during off-delay');
+
+  // Advance time past PRE (2s total): timer finishes off delay and turns DN OFF
+  e.executeScanCycle(rungs, 1.5);
+  assert.equal(e.data.T4[1].ACC, 2, 'TOF reached PRE (2s)');
+  assert.equal(e.data.T4[1].TT, false, 'TOF TT turns false after delay');
+  assert.equal(e.data.T4[1].DN, false, 'TOF DN turns false after delay');
+  assert.equal(e.getBit('O:0/1'), false, 'O:0/1 turns OFF after off-delay');
+});
+
+
