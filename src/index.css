@@ -878,6 +878,72 @@
 }
 
 .light-mode .ladder-editor, .light-mode .bench-switch, .light-mode .mobile-view-switch { background: transparent; }
+.light-mode .pilot-lamp {
+  background: radial-gradient(circle at 35% 35%, #ffffff, #d8dee8) !important;
+  border: 2px solid color-mix(in srgb, var(--signal) 45%, #cbd5e1) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+.light-mode .pilot-lamp > span {
+  background: color-mix(in srgb, var(--signal) 18%, #f8fafc) !important;
+  border: 1px solid color-mix(in srgb, var(--signal) 30%, #cbd5e1) !important;
+}
+.light-mode .pilot-lamp.lit {
+  border-color: var(--signal) !important;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--signal) 60%, transparent), inset 0 0 6px var(--signal) !important;
+}
+.light-mode .pilot-lamp.lit > span {
+  background: radial-gradient(circle at 40% 40%, #ffffff, var(--signal)) !important;
+  box-shadow: 0 0 20px var(--signal), inset 0 0 8px #ffffff !important;
+}
+.light-mode .bg-slate-800 {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+.light-mode .bg-amber-950 {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #fcd34d !important;
+}
+.light-mode .bg-slate-900\/90 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+.light-mode .bg-amber-950\/20 {
+  background-color: #fffbeb !important;
+  border-color: #fef08a !important;
+}
+.light-mode .bg-indigo-950\/20 {
+  background-color: #f5f3ff !important;
+  border-color: #ddd6fe !important;
+}
+.light-mode .bg-indigo-950\/40 {
+  background-color: #e0e7ff !important;
+  border-color: #a5b4fc !important;
+  color: #3730a3 !important;
+}
+.light-mode .bg-amber-950\/40 {
+  background-color: #fef3c7 !important;
+  border-color: #fcd34d !important;
+  color: #92400e !important;
+}
+.light-mode .bg-\[\#22252a\] {
+  background-color: #ffffff !important;
+}
+.light-mode .bg-\[\#1a1c20\] {
+  background-color: #f8fafc !important;
+}
+.light-mode .border-\[\#3c414a\] {
+  border-color: #e2e8f0 !important;
+}
+.light-mode .bg-\[\#1e1e1e\] {
+  background-color: #ffffff !important;
+}
+.light-mode .bg-\[\#1a1b1e\] {
+  background-color: #f8fafc !important;
+}
+.light-mode .border-\[\#2d2d2d\] {
+  border-color: #e2e8f0 !important;
+}
 .light-mode .momentary-control {
   border: 1.5px solid color-mix(in srgb, var(--signal) 75%, #ffffff) !important;
   background: color-mix(in srgb, var(--signal) 16%, #ffffff) !important;

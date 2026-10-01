@@ -85,11 +85,11 @@ export function validateLadderLogic(rungs, strictMode = false) {
       else hasInput = true;
 
       const address = normalizeAddress(item.operand);
-      const bitAddress = /^(?:[IO]:0\/[0-7]|B3:0\/(?:[0-9]|1[0-5])|T4:[0-9]\.(?:DN|TT|EN))$/;
+      const bitAddress = /^(?:[IO]:0\/[0-7]|B3:0\/(?:[0-9]|1[0-5])|T4:\d+\.(?:DN|TT|EN))$/;
       const coilAddress = /^(?:O:0\/[0-7]|B3:0\/(?:[0-9]|1[0-5]))$/;
       const valid = ['XIC','XIO'].includes(item.type) ? bitAddress.test(address)
         : ['OTE','OTL','OTU'].includes(item.type) ? coilAddress.test(address)
-        : ['TON','TOF','RTO','RES'].includes(item.type) ? /^T4:[0-9]$/.test(address) : true;
+        : ['TON','TOF','RTO','RES'].includes(item.type) ? /^T4:\d+$/.test(address) : true;
       if (address && !valid) issues.push({ severity: 'error', rungIdx: rIdx, elemId: item.id,
         message: `${item.type} on rung ${rIdx} has an invalid or unavailable address: ${address}.`,
         fix: 'Choose an address compatible with this instruction from the address picker.' });

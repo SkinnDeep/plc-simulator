@@ -41,6 +41,15 @@ export class PLCEngine {
     this.onsStates.clear();
   }
 
+  ensureTimer(rawIdx) {
+    const idx = parseInt(rawIdx, 10);
+    if (!Number.isFinite(idx) || idx < 0 || idx > 255) return null;
+    while (this.data.T4.length <= idx) {
+      this.data.T4.push({ PRE: 5, ACC: 0, EN: false, TT: false, DN: false, timeBase: 1.0 });
+    }
+    return this.data.T4[idx];
+  }
+
   // Address lookup helper
   getBit(rawAddr) {
     const addr = normalizeAddress(rawAddr);
@@ -52,7 +61,7 @@ export class PLCEngine {
       if (match) {
         const idx = parseInt(match[1], 10);
         const bit = (match[2] || 'DN').toUpperCase();
-        const timer = this.data.T4[idx];
+        const timer = this.ensureTimer(idx);
         if (timer) {
           if (bit === 'DN') return !!timer.DN;
           if (bit === 'TT') return !!timer.TT;
@@ -111,7 +120,7 @@ export class PLCEngine {
       if (match) {
         const idx = parseInt(match[1], 10);
         const field = match[2].toUpperCase();
-        const timer = this.data.T4[idx];
+        const timer = this.ensureTimer(idx);
         if (timer) {
           if (field === 'ACC') return timer.ACC;
           if (field === 'PRE') return timer.PRE;
@@ -335,7 +344,7 @@ export class PLCEngine {
       case 'TON': {
         // Timer On Delay
         const match = operand.match(/^T4:(\d+)$/);
-        const timer = match && this.data.T4[Number(match[1])];
+        const timer = match && this.ensureTimer(Number(match[1]));
         if (!timer) break;
         
         if (params.timeBase !== undefined) timer.timeBase = Number(params.timeBase);
@@ -375,7 +384,7 @@ export class PLCEngine {
         // Retentive Timer On Delay
         // Retains ACC and DN state when rung goes false; only RES clears ACC and DN.
         const match = operand.match(/^T4:(\d+)$/);
-        const timer = match && this.data.T4[Number(match[1])];
+        const timer = match && this.ensureTimer(Number(match[1]));
         if (!timer) break;
 
         if (params.timeBase !== undefined) timer.timeBase = Number(params.timeBase);
@@ -414,7 +423,7 @@ export class PLCEngine {
         // Rung true: EN=1, TT=0, DN=1, ACC=0.
         // Rung false: EN=0, TT=1, DN=1 until ACC >= PRE, then TT=0, DN=0.
         const match = operand.match(/^T4:(\d+)$/);
-        const timer = match && this.data.T4[Number(match[1])];
+        const timer = match && this.ensureTimer(Number(match[1]));
         if (!timer) break;
 
         if (params.timeBase !== undefined) timer.timeBase = Number(params.timeBase);
@@ -455,12 +464,13 @@ export class PLCEngine {
         if (powerIn) {
           const match = operand.match(/^T4:(\d+)$/);
           const tIdx = match ? Number(match[1]) : -1;
-          if (this.data.T4[tIdx]) {
-            this.data.T4[tIdx].ACC = 0;
-            this.data.T4[tIdx]._elapsed = 0;
-            this.data.T4[tIdx].EN = false;
-            this.data.T4[tIdx].TT = false;
-            this.data.T4[tIdx].DN = false;
+          const timer = this.ensureTimer(tIdx);
+          if (timer) {
+            timer.ACC = 0;
+            timer._elapsed = 0;
+            timer.EN = false;
+            timer.TT = false;
+            timer.DN = false;
           }
         }
         active = powerIn;

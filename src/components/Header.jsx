@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Activity, Play, Square, RotateCcw, Cpu, GraduationCap, HelpCircle, CheckCircle2, AlertTriangle, Database, Undo2, Redo2, Sun, Moon, Bug, ChevronDown } from 'lucide-react';
 import { SAMPLE_PROGRAMS } from '../data/samplePrograms';
 
-export function Header({ isRunning, onToggleRun, onResetMemory, onUndo, onRedo, canUndo, canRedo, activeMainTab, onChangeMainTab, onSelectSampleProgram, onOpenHelp, showRunHint, logicIssues, isBitMonitorOpen, onToggleBitMonitor, theme, onToggleTheme }) {
+export function Header({ isRunning, onToggleRun, onResetMemory, onOpenFullResetModal, onUndo, onRedo, canUndo, canRedo, activeMainTab, onChangeMainTab, onSelectSampleProgram, onOpenHelp, showRunHint, logicIssues, isBitMonitorOpen, onToggleBitMonitor, theme, onToggleTheme }) {
+  const [isResetExpanded, setIsResetExpanded] = useState(false);
+
   return (
     <div className="header-stack">
       <header className="app-header">
@@ -30,7 +32,44 @@ export function Header({ isRunning, onToggleRun, onResetMemory, onUndo, onRedo, 
           <button className={`ui-button run-button ${isRunning ? 'is-running' : ''}`} title={isRunning ? 'Stop PLC execution' : 'Run PLC program'} aria-label={isRunning ? 'Stop PLC' : 'Run PLC'} aria-pressed={isRunning} onClick={onToggleRun}>
             {isRunning ? <Square size={14} fill="currentColor" /> : <Play size={15} fill="currentColor" />}<span>{isRunning ? 'Stop' : 'Run'}</span>
           </button>
-          <button className="ui-button quiet" title="Reset all lamps, coils, and timers to 0" aria-label="Reset logic" onClick={onResetMemory}><RotateCcw size={15} /><span>Reset</span></button>
+          {isResetExpanded ? (
+            <div className="flex items-center gap-1 bg-slate-800/90 border border-slate-600 rounded-md p-0.5 animate-in fade-in duration-150 shadow-sm">
+              <button
+                className="ui-button quiet text-xs px-2 py-1 bg-slate-700/80 hover:bg-slate-600 text-slate-200 rounded flex items-center gap-1 transition"
+                title="Reset switches, coils, energy, and timers to 0"
+                onClick={() => {
+                  onResetMemory();
+                  setIsResetExpanded(false);
+                }}
+              >
+                <RotateCcw size={13} className="text-cyan-400" />
+                <span>Reset run</span>
+              </button>
+              <button
+                className="ui-button quiet text-xs px-2 py-1 bg-red-950/70 hover:bg-red-900 text-red-200 border border-red-500/40 rounded flex items-center gap-1 transition"
+                title="Full simulation reset: erase variables, rungs, and PLC tables"
+                onClick={() => {
+                  setIsResetExpanded(false);
+                  onOpenFullResetModal?.();
+                }}
+              >
+                <AlertTriangle size={13} className="text-red-400" />
+                <span>Simulation reset</span>
+              </button>
+              <button
+                className="text-slate-400 hover:text-white px-1.5 py-0.5 rounded text-xs transition"
+                title="Cancel"
+                onClick={() => setIsResetExpanded(false)}
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button className="ui-button quiet" title="Reset options" aria-label="Reset options" onClick={() => setIsResetExpanded(true)}>
+              <RotateCcw size={15} />
+              <span>Reset</span>
+            </button>
+          )}
           <span className="toolbar-divider" />
           <button className="icon-button" aria-label="Undo" title="Undo" onClick={onUndo} disabled={!canUndo}><Undo2 size={16} /></button>
           <button className="icon-button" aria-label="Redo" title="Redo" onClick={onRedo} disabled={!canRedo}><Redo2 size={16} /></button>

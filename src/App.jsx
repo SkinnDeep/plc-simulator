@@ -11,7 +11,7 @@ import { LearningTab } from './components/LearningTab';
 import { SpotlightTour } from './components/SpotlightTour';
 import { BitMonitorDrawer } from './components/BitMonitorDrawer';
 import { validateLadderLogic } from './engine/plcValidator';
-import { Check, AlertTriangle, Workflow, SlidersHorizontal } from 'lucide-react';
+import { Check, AlertTriangle, Workflow, SlidersHorizontal, Download, Trash2 } from 'lucide-react';
 
 const INITIAL_BLANK_RUNGS = [
   {
@@ -91,6 +91,65 @@ export function App() {
       try { localStorage.setItem('plcSymbolsBySandbox', JSON.stringify(next)); } catch {}
       return next;
     });
+  };
+
+  const [isFullResetModalOpen, setIsFullResetModalOpen] = useState(false);
+
+  const customVariablesList = useMemo(() => {
+    const defaults = activeSandbox === 'MetalShear' ? DEFAULT_SHEAR_SYMBOLS : DEFAULT_PLC1_SYMBOLS;
+    const current = symbolsMap[activeSandbox] || {};
+    const list = [];
+    Object.keys(current).forEach(addr => {
+      if (current[addr] && current[addr] !== defaults[addr]) {
+        list.push({ addr, name: current[addr], original: defaults[addr] || '(default)' });
+      }
+    });
+    return list;
+  }, [symbolsMap, activeSandbox]);
+
+  const handleExportProgram = () => {
+    const exportPayload = {
+      version: 'RSLogix-500-Sim-v2',
+      timestamp: new Date().toISOString(),
+      sandbox: activeSandbox,
+      symbols: activeSymbols,
+      rungs: currentRungs
+    };
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${activeSandbox.toLowerCase()}_ladder_backup.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showBanner("Program & symbols exported to JSON successfully.");
+  };
+
+  const handleConfirmFullReset = () => {
+    setSymbolsMap(prev => {
+      const next = { ...prev };
+      delete next[activeSandbox];
+      try {
+        localStorage.setItem('plcSymbolsBySandbox', JSON.stringify(next));
+      } catch (err) {
+        console.error(err);
+      }
+      return next;
+    });
+
+    const defaultRung = [{
+      id: 'rung-0',
+      comment: 'Rung 000: Control logic',
+      items: []
+    }];
+    setCurrentRungs(defaultRung);
+    setHistory([defaultRung]);
+    setHistoryIndex(0);
+
+    setIsRunning(false);
+    setPlcData(createInitialDataModel());
+    setIsFullResetModalOpen(false);
+    showBanner("Simulation fully reset: logic, memory, and custom variable names wiped.");
   };
 
   // History stack for Undo/Redo
@@ -322,6 +381,7 @@ export function App() {
         isRunning={isRunning}
         onToggleRun={handleToggleRun}
         onResetMemory={handleResetMemory}
+        onOpenFullResetModal={() => setIsFullResetModalOpen(true)}
         onUndo={handleUndo}
         onRedo={handleRedo}
         canUndo={!isRunning && historyIndex > 0}
@@ -470,6 +530,91 @@ export function App() {
               <li key={idx} className="text-amber-300/80">{issue.message} <span className="text-amber-100">{issue.fix}</span></li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Full Simulation Reset Confirmation Modal */}
+      {isFullResetModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-slate-900 border-2 border-red-500/80 rounded-2xl p-6 shadow-2xl max-w-md w-full space-y-4 text-slate-100">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
+              <div className="p-2 rounded-lg bg-red-950/60 border border-red-500/40 text-red-400">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Confirm Full Simulation Reset</h3>
+                <p className="text-xs text-slate-400">Environment: {activeSandbox === 'MetalShear' ? 'Metal Shear Station' : 'Hardware Trainer'}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              This will completely wipe your current simulation state, deleting your rungs, resetting all PLC data tables &amp; switches to 0, and reverting all custom variable names.
+            </p>
+
+            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs">
+              <div className="font-bold text-slate-200 flex items-center gap-1.5">
+                <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                <span>The following will be deleted:</span>
+              </div>
+              <ul className="space-y-1.5 pl-2 text-slate-300 font-mono text-[11px]">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                  <span><strong>{currentRungs.length}</strong> Ladder Logic rung(s)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                  <span>PLC Memory (Timers, Coils, Registers N7, Relays B3, Switches)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0 mt-1" />
+                  <div>
+                    <span><strong>{customVariablesList.length}</strong> Custom Variable Name(s):</span>
+                    {customVariablesList.length > 0 ? (
+                      <div className="max-h-24 overflow-y-auto mt-1 space-y-0.5 pr-1">
+                        {customVariablesList.map(v => (
+                          <div key={v.addr} className="text-[10px] text-cyan-300 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                            {v.addr}: &quot;{v.name}&quot; &rarr; resets to &quot;{v.original}&quot;
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-slate-400 italic">No custom names set (default tags in use)</div>
+                    )}
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-500/30 flex items-center justify-between text-xs">
+              <span className="text-cyan-200">Want to restore your work later?</span>
+              <button
+                type="button"
+                onClick={handleExportProgram}
+                className="px-2.5 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] flex items-center gap-1 transition cursor-pointer shadow-sm"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export First
+              </button>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsFullResetModalOpen(false)}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:bg-slate-800 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmFullReset}
+                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition cursor-pointer shadow-lg shadow-red-950/50 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Confirm Simulation Reset
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

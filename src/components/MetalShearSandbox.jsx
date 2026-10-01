@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Scissors, Activity, SlidersHorizontal, ArrowRight, Gauge, RotateCcw } from 'lucide-react';
 
-export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
+export function MetalShearSandbox({ plcData, onToggleInput, isRunning, symbols = {} }) {
   const isBitOn = (addr) => !!plcData?.bits?.[addr];
 
   const conv1On = isBitOn('O:0/0');

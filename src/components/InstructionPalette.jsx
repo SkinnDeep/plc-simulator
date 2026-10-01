@@ -13,14 +13,34 @@ export function InstructionPalette({
   activeSandbox = 'HardwareTrainer'
 }) {
   const [activeCategory, setActiveCategory] = useState('Bit');
-  const [mappedTimer, setMappedTimer] = useState(existingTimers[0] || 'T4:0');
+  const [extraTimers, setExtraTimers] = useState([]);
 
-  // Keep mappedTimer aligned with existing timers if list changes
+  const allTimers = React.useMemo(() => {
+    const list = Array.from(new Set([...existingTimers, ...extraTimers]));
+    if (list.length === 0) list.push('T4:0');
+    return list.sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+      return numA - numB;
+    });
+  }, [existingTimers, extraTimers]);
+
+  const [mappedTimer, setMappedTimer] = useState(allTimers[0] || 'T4:0');
+
+  // Keep mappedTimer aligned if timers change
   React.useEffect(() => {
-    if (existingTimers.length > 0 && !existingTimers.includes(mappedTimer)) {
-      setMappedTimer(existingTimers[0]);
+    if (allTimers.length > 0 && !allTimers.includes(mappedTimer)) {
+      setMappedTimer(allTimers[0]);
     }
-  }, [existingTimers, mappedTimer]);
+  }, [allTimers, mappedTimer]);
+
+  const handleAddNewTimer = () => {
+    const nums = allTimers.map(t => parseInt(t.replace(/\D/g, ''), 10) || 0);
+    const nextNum = nums.length > 0 ? Math.max(...nums) + 1 : 0;
+    const newTimer = `T4:${nextNum}`;
+    setExtraTimers(prev => [...prev, newTimer]);
+    setMappedTimer(newTimer);
+  };
 
   const categories = ['Bit', 'Timers', 'I/O & Tags', 'Math', 'Move / logic', 'Compare'];
 
@@ -134,7 +154,7 @@ export function InstructionPalette({
       const addr = `B3:0/${b}`;
       list.push({ addr, label: symbols?.[addr] || (activeSandbox === 'MetalShear' && b === 0 ? 'RUN_RELAY' : `Relay ${b}`), group: 'Internal', isOutput: false });
     }
-    existingTimers.forEach(t => {
+    allTimers.forEach(t => {
       list.push({ addr: `${t}.DN`, label: `${t} Done Bit`, group: 'Timer', isOutput: false });
       list.push({ addr: `${t}.TT`, label: `${t} Timing Bit`, group: 'Timer', isOutput: false });
       list.push({ addr: `${t}.EN`, label: `${t} Enable Bit`, group: 'Timer', isOutput: false });
@@ -146,7 +166,7 @@ export function InstructionPalette({
       }
     });
     return list;
-  }, [activeSandbox, symbols, existingTimers]);
+  }, [activeSandbox, symbols, allTimers]);
 
   return (
     <div id="tour-palette" className="instruction-palette">
@@ -184,15 +204,21 @@ export function InstructionPalette({
                   value={mappedTimer}
                   onChange={(e) => setMappedTimer(e.target.value)}
                   className="bg-slate-900 border border-purple-500/50 text-purple-200 text-xs font-mono font-bold rounded px-1.5 py-0.5 focus:outline-none cursor-pointer hover:border-purple-400"
-                  title="Select which existing timer to map DN, TT, or EN to"
+                  title="Select which timer to map DN, TT, or EN to"
                 >
-                  {existingTimers.map(t => (
+                  {allTimers.map(t => (
                     <option key={t} value={t}>{t}</option>
                   ))}
-                  {['T4:0', 'T4:1', 'T4:2', 'T4:3'].filter(t => !existingTimers.includes(t)).map(t => (
-                    <option key={t} value={t}>{t} (New)</option>
-                  ))}
                 </select>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={handleAddNewTimer}
+                  className="px-1.5 py-0.5 rounded bg-purple-900/60 hover:bg-purple-800 text-purple-200 text-[10px] font-mono font-bold border border-purple-400/40 cursor-pointer transition"
+                  title="Create and map another timer (unlimited timers)"
+                >
+                  + Timer
+                </button>
               </div>
 
               <div className="flex items-center gap-1.5">
