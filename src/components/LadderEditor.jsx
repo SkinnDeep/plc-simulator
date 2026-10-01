@@ -297,14 +297,19 @@ export function LadderEditor({
     nextRungs[rungIdx] = { ...rung, items: wrapList(rung.items) };
     onChangeRungs(nextRungs);
   };
-    const handleAddContactToBranchPath = (rungIdx, branchId, pathIdx, isOutputZone = false) => {
+    const handleAddInstructionToBranchPath = (rungIdx, branchId, pathIdx, type = 'OTE', extra = {}, defaultAddr = null) => {
     const rung = rungs[rungIdx];
     if (!rung) return;
 
-    const newId = `bElem_${Date.now()}`;
-    const newItem = isOutputZone 
-      ? { id: newId, type: 'OTE', operand: 'O:0/0', desc: 'Output' }
-      : { id: newId, type: 'XIC', operand: 'I:0/0', desc: 'Contact' };
+    const isOutput = isOutputInstruction(type);
+    const newId = `bElem_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    const newItem = {
+      id: newId,
+      type,
+      operand: defaultAddr || (isOutput ? 'O:0/0' : 'I:0/0'),
+      desc: isOutput ? (type === 'OTL' ? 'Latch Output' : type === 'OTU' ? 'Unlatch Output' : 'Output Coil') : 'Contact',
+      ...extra
+    };
 
     const updateList = (list) => {
       return list.map(it => {
@@ -323,6 +328,39 @@ export function LadderEditor({
     nextRungs[rungIdx] = { ...rung, items: updateList(rung.items) };
     onChangeRungs(nextRungs);
     setSelectedItemId(newId);
+  };
+
+  const handleAddContactToBranchPath = (rungIdx, branchId, pathIdx, isOutputZone = false) => {
+    handleAddInstructionToBranchPath(rungIdx, branchId, pathIdx, isOutputZone ? 'OTE' : 'XIC');
+  };
+
+  const handleDropOnBranchPath = (e, rungIdx, branchId, pathIdx, isOutputZone) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const raw = e.dataTransfer.getData('application/json');
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (data.kind === 'instruction') {
+        let extra = {};
+        if (['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ'].includes(data.type)) {
+          extra = { params: { sourceA: 'N7:0', sourceB: '1' } };
+        } else if (data.type === 'LIM') {
+          extra = { params: { lowLim: '0', test: 'N7:0', highLim: '10' } };
+        } else if (['ADD', 'SUB', 'MUL', 'DIV'].includes(data.type)) {
+          extra = { params: { sourceA: 'N7:0', sourceB: '1', dest: 'N7:1' } };
+        } else if (data.type === 'MOV') {
+          extra = { params: { source: 'N7:0', dest: 'N7:1' } };
+        } else if (data.type === 'TON') {
+          extra = { params: { pre: 2.0, timeBase: 1.0 } };
+        }
+        handleAddInstructionToBranchPath(rungIdx, branchId, pathIdx, data.type, extra);
+      } else if (data.kind === 'io') {
+        handleAddInstructionToBranchPath(rungIdx, branchId, pathIdx, isOutputZone ? 'OTE' : 'XIC', {}, data.addr);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Add an additional parallel path level to a branch
@@ -682,7 +720,25 @@ export function LadderEditor({
       <div className="relative">
         <InstructionPalette
           disabled={isRunning}
-          onAddInstruction={(type) => handleAddInstructionToRung(selectedRungIdx, type)}
+          onAddInstruction={(type) => {
+          if (selectedItemId) {
+            let extra = {};
+            if (['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ'].includes(type)) {
+              extra = { params: { sourceA: 'N7:0', sourceB: '1' } };
+            } else if (type === 'LIM') {
+              extra = { params: { lowLim: '0', test: 'N7:0', highLim: '10' } };
+            } else if (['ADD', 'SUB', 'MUL', 'DIV'].includes(type)) {
+              extra = { params: { sourceA: 'N7:0', sourceB: '1', dest: 'N7:1' } };
+            } else if (type === 'MOV') {
+              extra = { params: { source: 'N7:0', dest: 'N7:1' } };
+            } else if (type === 'TON') {
+              extra = { params: { pre: 2.0, timeBase: 1.0 } };
+            }
+            handleUpdateItem(selectedRungIdx, selectedItemId, { type, ...extra });
+          } else {
+            handleAddInstructionToRung(selectedRungIdx, type);
+          }
+        }}
           isBranchMode={isBranchMode}
           onToggleBranchMode={() => {
             setIsBranchMode(!isBranchMode);
@@ -1185,7 +1241,14 @@ export function LadderEditor({
                                           e.stopPropagation();
                                           handleAddContactToBranchPath(rIdx, item.id, pathIdx, true);
                                         }}
+                                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-amber-400'); }}
+                                        onDragLeave={(e) => e.currentTarget.classList.remove('ring-2', 'ring-amber-400')}
+                                        onDrop={(e) => {
+                                          e.currentTarget.classList.remove('ring-2', 'ring-amber-400');
+                                          handleDropOnBranchPath(e, rIdx, item.id, pathIdx, true);
+                                        }}
                                         className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-mono border border-slate-700 cursor-pointer transition active:scale-95"
+                                        title="Click or drop instruction (e.g. OTL, OTE, TON) here"
                                       >
                                         + Output
                                       </button>
@@ -1485,7 +1548,7 @@ function ItemDeleteButton({ isVisible, onDelete, title = "Delete instruction" })
 }
 
 // Minimalist ISA-101 Industrial Instruction Card
-function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onDelete, symbols, onDropItem }) {
+function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onUpdate, onDelete, symbols, onDropItem, isOutputZone = false }) {
   const { hoverTrash, handleMouseEnter, handleMouseLeave } = useHoverTrash();
   const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
   const color = isActive 
@@ -1545,8 +1608,21 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         )}
       </button>
 
-      {/* Symbol */}
-      <div className={`text-base font-mono tracking-widest leading-none ${color} ${isSelected ? 'px-1 rounded bg-black/40' : ''}`}>
+      {/* Symbol with click-to-cycle */}
+      <div 
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onUpdate) {
+            if (item.type === 'OTE') onUpdate({ type: 'OTL', desc: 'Latch Output' });
+            else if (item.type === 'OTL') onUpdate({ type: 'OTU', desc: 'Unlatch Output' });
+            else if (item.type === 'OTU') onUpdate({ type: 'OTE', desc: 'Output Lamp / Coil' });
+            else if (item.type === 'XIC') onUpdate({ type: 'XIO', desc: 'Normally Closed' });
+            else if (item.type === 'XIO') onUpdate({ type: 'XIC', desc: 'Normally Open Switch' });
+          }
+        }}
+        className={`text-base font-mono tracking-widest leading-none ${color} ${isSelected ? 'px-1 rounded bg-black/40' : ''} hover:scale-105 transition-transform`}
+        title={['OTE','OTL','OTU'].includes(item.type) ? "Click to cycle OTE -> OTL -> OTU" : ['XIC','XIO'].includes(item.type) ? "Click to toggle XIC <-> XIO" : ""}
+      >
         {item.type === 'XIC' && '-] [-'}
         {item.type === 'XIO' && '-[/]-'}
         {item.type === 'OTE' && '-( )-'}
@@ -1556,6 +1632,56 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         {item.type === 'RES' && '-(RES)-'}
         {['ONS', 'OSR', 'OSF', 'MOV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type) && `[${item.type}]`}
       </div>
+
+      {/* Quick Type Selector for Output Coils */}
+      {['OTE', 'OTL', 'OTU'].includes(item.type) && (
+        <div className="flex items-center bg-black/50 rounded border border-amber-500/30 overflow-hidden text-[9px] font-mono mt-1 shadow-sm">
+          {[
+            { t: 'OTE', label: '( )' },
+            { t: 'OTL', label: '(L)' },
+            { t: 'OTU', label: '(U)' }
+          ].map(({ t, label }) => (
+            <button
+              key={t}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onUpdate) onUpdate({ type: t, desc: t === 'OTL' ? 'Latch Output' : t === 'OTU' ? 'Unlatch Output' : 'Output Lamp / Coil' });
+              }}
+              className={`px-1.5 py-0.5 transition cursor-pointer ${
+                item.type === t
+                  ? 'bg-amber-500/40 text-amber-200 font-bold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+              title={`Switch to ${t}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Quick Type Selector if contact is in an output branch */}
+      {isOutputZone && ['XIC', 'XIO'].includes(item.type) && (
+        <div className="flex items-center bg-black/50 rounded border border-amber-500/40 overflow-hidden text-[9px] font-mono mt-1 shadow-sm">
+          {[
+            { t: 'OTE', label: '( )' },
+            { t: 'OTL', label: '(L)' },
+            { t: 'OTU', label: '(U)' }
+          ].map(({ t, label }) => (
+            <button
+              key={t}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onUpdate) onUpdate({ type: t, desc: t === 'OTL' ? 'Latch Output' : t === 'OTU' ? 'Unlatch Output' : 'Output Lamp / Coil' });
+              }}
+              className="px-1.5 py-0.5 transition cursor-pointer text-amber-300 hover:text-white hover:bg-amber-900/60"
+              title={`Convert contact to ${t} output`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Controls Overlay with hover & select support */}
       <ItemDeleteButton isVisible={isSelected || hoverTrash} onDelete={onDelete} />
