@@ -81,7 +81,7 @@ export function BitMonitorDrawer({
 
   const DEFAULT_PLC2_SYMBOLS = {
     'I:0/0': 'START_PB', 'I:0/1': 'STOP_PB', 'I:0/2': 'PROX', 'I:0/3': 'DOWN_LS', 'I:0/4': 'UP_LS',
-    'O:0/0': 'CONV1_MTR', 'O:0/1': 'CONV2_MTR', 'O:0/2': 'SHEAR_CYL_RET', 'O:0/3': 'CONV3_MTR'
+    'O:0/0': 'CONV1', 'O:0/1': 'CONV2', 'O:0/2': 'SHEAR', 'O:0/3': 'CONV3', 'B3:0/0': 'RUN_RELAY'
   };
 
   const getLabel = (addr, defaultName) => {

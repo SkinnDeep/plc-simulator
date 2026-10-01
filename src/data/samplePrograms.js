@@ -188,7 +188,64 @@ export const SAMPLE_PROGRAMS = [
         ]
       }
     ]
+  },
+  {
+    id: 'metal-shear-auto',
+    name: '7. Metal Shear: Auto Cut-to-Length',
+    description: 'Automatic sheet feeding and cut-to-length sequence. Start PB (I:0/0) runs CONV1 (O:0/0) and CONV2 (O:0/1). When metal reaches PROX (I:0/2), conveyors stop and SHEAR blade (O:0/2) cuts until DOWN_LS (I:0/3). CONV3 (O:0/3) clears cut sheets.',
+    rungs: [
+      {
+        id: 'ms_r0',
+        comment: 'Rung 0: System Master Run (B3:0/0) sealed by START_PB (I:0/0), stopped by STOP_PB (I:0/1)',
+        items: [
+          {
+            id: 'ms_r0_b',
+            type: 'BRANCH',
+            branches: [
+              [{ id: 'ms_b_start', type: 'XIC', operand: 'I:0/0', desc: 'START_PB' }],
+              [{ id: 'ms_b_seal', type: 'XIC', operand: 'B3:0/0', desc: 'RUN_RELAY' }]
+            ]
+          },
+          { id: 'ms_r0_stop', type: 'XIC', operand: 'I:0/1', desc: 'STOP_PB' },
+          { id: 'ms_r0_run', type: 'OTE', operand: 'B3:0/0', desc: 'RUN_RELAY' }
+        ]
+      },
+      {
+        id: 'ms_r1',
+        comment: 'Rung 1: Feed Conveyor 1 (O:0/0) runs when system active, blade UP (I:0/4), and metal has not reached PROX (I:0/2)',
+        items: [
+          { id: 'ms_r1_run', type: 'XIC', operand: 'B3:0/0', desc: 'RUN_RELAY' },
+          { id: 'ms_r1_up', type: 'XIC', operand: 'I:0/4', desc: 'UP_LS' },
+          { id: 'ms_r1_prox', type: 'XIO', operand: 'I:0/2', desc: 'PROX' },
+          { id: 'ms_r1_c1', type: 'OTE', operand: 'O:0/0', desc: 'CONV1' }
+        ]
+      },
+      {
+        id: 'ms_r2',
+        comment: 'Rung 2: Conveyor 2 (O:0/1) runs in tandem with Conveyor 1 for sheet transfer',
+        items: [
+          { id: 'ms_r2_c1', type: 'XIC', operand: 'O:0/0', desc: 'CONV1' },
+          { id: 'ms_r2_c2', type: 'OTE', operand: 'O:0/1', desc: 'CONV2' }
+        ]
+      },
+      {
+        id: 'ms_r3',
+        comment: 'Rung 3: When metal reaches PROX (I:0/2), energize SHEAR blade (O:0/2) until DOWN_LS (I:0/3) is struck',
+        items: [
+          { id: 'ms_r3_run', type: 'XIC', operand: 'B3:0/0', desc: 'RUN_RELAY' },
+          { id: 'ms_r3_prox', type: 'XIC', operand: 'I:0/2', desc: 'PROX' },
+          { id: 'ms_r3_down', type: 'XIO', operand: 'I:0/3', desc: 'DOWN_LS' },
+          { id: 'ms_r3_sh', type: 'OTE', operand: 'O:0/2', desc: 'SHEAR' }
+        ]
+      },
+      {
+        id: 'ms_r4',
+        comment: 'Rung 4: Exit Conveyor 3 (O:0/3) clears cut parts whenever system is running',
+        items: [
+          { id: 'ms_r4_run', type: 'XIC', operand: 'B3:0/0', desc: 'RUN_RELAY' },
+          { id: 'ms_r4_c3', type: 'OTE', operand: 'O:0/3', desc: 'CONV3' }
+        ]
+      }
+    ]
   }
 ];
-
-

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Scissors, Activity, SlidersHorizontal, ArrowRight, Gauge } from 'lucide-react';
+import { Scissors, Activity, SlidersHorizontal, ArrowRight, Gauge, RotateCcw } from 'lucide-react';
 
 export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
   const isBitOn = (addr) => !!plcData?.bits?.[addr];
@@ -207,6 +207,27 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
     }
   }, []);
 
+  const handleResetMetal = () => {
+    stateRef.current.stripX = 0;
+    stateRef.current.bladeY = 0;
+    stateRef.current.cutSheets = [];
+    stateRef.current.nextSheetId = 0;
+    stateRef.current.sensors = {
+      PROX: false,
+      UP_LS: true,
+      DOWN_LS: false,
+    };
+    onToggleInputRef.current('I:0/2', false);
+    onToggleInputRef.current('I:0/3', false);
+    onToggleInputRef.current('I:0/4', true);
+    setUiState({
+      stripX: 0,
+      bladeY: 0,
+      cutSheets: [],
+      sensors: { PROX: false, UP_LS: true, DOWN_LS: false }
+    });
+  };
+
   const isStartPressed = isBitOn('I:0/0');
   const isStopPressed = !isBitOn('I:0/1');
 
@@ -228,9 +249,19 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
 
       {/* 2. Simulation Viewport Section */}
       <section className="hardware-section" style={{ padding: '12px 14px' }}>
-        <div className="hardware-section-heading" style={{ marginBottom: '8px' }}>
+        <div className="hardware-section-heading" style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h4><Activity size={14} />Simulation cell</h4>
-          <span>O:0/0-3 · I:0/2-4</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleResetMetal}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold rounded bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/60 transition cursor-pointer active:scale-95 shadow-sm"
+              title="Reset metal strip and cut sheets back to initial position"
+            >
+              <RotateCcw size={12} className="text-amber-400" />
+              <span>Reset Metal</span>
+            </button>
+            <span className="text-[10px] text-slate-500 font-mono">O:0/0-3 · I:0/2-4</span>
+          </div>
         </div>
 
         {/* Viewport Frame */}
@@ -241,6 +272,16 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
         >
           {/* Subtle grid background */}
           <div className="absolute inset-0 opacity-15 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #38bdf8 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+
+          {/* Viewport Reset Metal Button Overlay */}
+          <button
+            onClick={handleResetMetal}
+            className="absolute top-2 left-2 z-20 flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono font-bold rounded bg-slate-900/85 hover:bg-slate-800 border border-slate-700 hover:border-amber-400/80 text-slate-200 hover:text-amber-300 backdrop-blur-sm transition-all cursor-pointer shadow-md active:scale-95"
+            title="Reset metal strip and cut pieces back to start"
+          >
+            <RotateCcw size={12} className="text-amber-400" />
+            <span>Reset Metal</span>
+          </button>
 
           {/* Status Overlay: Limit Switches & Sensors */}
           <div className="absolute top-2 right-2 flex flex-col gap-1 z-20 text-[9px] font-mono">
@@ -283,7 +324,7 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
             <div className={`w-2.5 h-2.5 rounded-full border ${conv1On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
           </div>
           <div className="absolute bottom-0 text-[8px] font-mono text-slate-400 flex items-center gap-1" style={{ left: toPct(SHEAR_X / 2 - 14) }}>
-            <span className={conv1On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>C1 (O:0/0)</span>
+            <span className={conv1On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>CONV1 (O:0/0)</span>
           </div>
 
           {/* Conveyor 2 */}
@@ -299,7 +340,7 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
             <div className={`w-2.5 h-2.5 rounded-full border ${conv2On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
           </div>
           <div className="absolute bottom-0 text-[8px] font-mono text-slate-400 flex items-center gap-1" style={{ left: toPct((SHEAR_X + END_CONV2_X) / 2 - 14) }}>
-            <span className={conv2On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>C2 (O:0/1)</span>
+            <span className={conv2On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>CONV2 (O:0/1)</span>
           </div>
 
           {/* Conveyor 3 */}
@@ -315,7 +356,7 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
             <div className={`w-2.5 h-2.5 rounded-full border ${conv3On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
           </div>
           <div className="absolute bottom-0 text-[8px] font-mono text-slate-400 flex items-center gap-1" style={{ left: toPct((END_CONV2_X + DROP_X) / 2 - 14) }}>
-            <span className={conv3On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>C3 (O:0/3)</span>
+            <span className={conv3On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>CONV3 (O:0/3)</span>
           </div>
 
           {/* The Continuous Sheet / Strip */}
@@ -362,7 +403,8 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
                 ? 'bg-amber-950/80 border-amber-500/70 shadow-[0_0_10px_rgba(245,158,11,0.25)]' 
                 : 'bg-slate-800 border-slate-600'
             }`}>
-              <span className="text-[7px] font-mono font-bold text-amber-300">O:0/2</span>
+              <span className="text-[6.5px] font-mono font-bold text-amber-300">SHEAR</span>
+              <span className="text-[5.5px] font-mono text-amber-400/80">O:0/2</span>
             </div>
             {/* Cylinder Rod */}
             <div 

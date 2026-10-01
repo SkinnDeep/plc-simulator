@@ -39,18 +39,18 @@ const METAL_SHEAR_ADDRESS_OPTIONS = [
   { group: 'Inputs (Switches & Sensors)', items: [
     { addr: 'I:0/0', label: 'START_PB', desc: 'Start Pushbutton (N.O.)' },
     { addr: 'I:0/1', label: 'STOP_PB', desc: 'Stop Pushbutton (N.C.)' },
-    { addr: 'I:0/2', label: 'PROX', desc: 'Proximity Sensor' },
+    { addr: 'I:0/2', label: 'PROX', desc: 'Proximity Sensor (Cut Point)' },
     { addr: 'I:0/3', label: 'DOWN_LS', desc: 'Shear Blade Down Limit' },
     { addr: 'I:0/4', label: 'UP_LS', desc: 'Shear Blade Up Limit' }
   ]},
   { group: 'Outputs (Motors & Cylinders)', items: [
-    { addr: 'O:0/0', label: 'CONV1_MTR', desc: 'Conveyor 1 Motor' },
-    { addr: 'O:0/1', label: 'CONV2_MTR', desc: 'Conveyor 2 Motor' },
-    { addr: 'O:0/2', label: 'SHEAR_CYL_RET', desc: 'Shear Cylinder Retract' },
-    { addr: 'O:0/3', label: 'CONV3_MTR', desc: 'Conveyor 3 Motor' }
+    { addr: 'O:0/0', label: 'CONV1', desc: 'Conveyor 1 Motor' },
+    { addr: 'O:0/1', label: 'CONV2', desc: 'Conveyor 2 Motor' },
+    { addr: 'O:0/2', label: 'SHEAR', desc: 'Shear Blade Cylinder Down' },
+    { addr: 'O:0/3', label: 'CONV3', desc: 'Conveyor 3 Motor' }
   ]},
   { group: 'Internal Relays (B3)', items: [
-    { addr: 'B3:0/0', label: 'Internal Bit 0', desc: 'Relay Flag 0' },
+    { addr: 'B3:0/0', label: 'RUN_RELAY', desc: 'System Master Run Flag' },
     { addr: 'B3:0/1', label: 'Internal Bit 1', desc: 'Relay Flag 1' },
     { addr: 'B3:0/2', label: 'Internal Bit 2', desc: 'Relay Flag 2' }
   ]},
@@ -1373,8 +1373,7 @@ export function LadderEditor({
                   </span>
                   <div className="grid grid-cols-2 gap-2">
                     {grp.items.map((item) => {
-                      const isDefaultPlc1 = ['Switch 1', 'Switch 2', 'Green PB', 'Red PB', 'Amber Lamp 1', 'Blue Lamp 2', 'Green Lamp 3', 'Red Lamp 4'].includes(symbols?.[item.addr]);
-                      const displayLabel = (symbols?.[item.addr] && !isDefaultPlc1) ? symbols[item.addr] : item.label;
+                      const displayLabel = symbols?.[item.addr] || item.label;
 
                       return (
                         <button

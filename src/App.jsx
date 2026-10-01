@@ -21,33 +21,74 @@ const INITIAL_BLANK_RUNGS = [
   }
 ];
 
+export const DEFAULT_PLC1_SYMBOLS = {
+  'I:0/0': 'Switch 1',
+  'I:0/1': 'Switch 2',
+  'I:0/2': 'Green PB',
+  'I:0/3': 'Red PB',
+  'O:0/0': 'Amber Lamp 1',
+  'O:0/1': 'Blue Lamp 2',
+  'O:0/2': 'Green Lamp 3',
+  'O:0/3': 'Red Lamp 4',
+  'T4:0': 'Timer 0',
+  'N7:0': 'Int 0'
+};
+
+export const DEFAULT_SHEAR_SYMBOLS = {
+  'I:0/0': 'START_PB',
+  'I:0/1': 'STOP_PB',
+  'I:0/2': 'PROX',
+  'I:0/3': 'DOWN_LS',
+  'I:0/4': 'UP_LS',
+  'O:0/0': 'CONV1',
+  'O:0/1': 'CONV2',
+  'O:0/2': 'SHEAR',
+  'O:0/3': 'CONV3',
+  'B3:0/0': 'RUN_RELAY',
+  'T4:0': 'Timer 0',
+  'N7:0': 'Int 0'
+};
+
 export function App() {
   const [activeSandbox, setActiveSandbox] = useState('HardwareTrainer');
   const [plcData, setPlcData] = useState(() => createInitialDataModel());
   const [isRunning, setIsRunning] = useState(false);
-  const [symbols, setSymbols] = useState(() => {
+  const [symbolsMap, setSymbolsMap] = useState(() => {
     try {
-      const saved = localStorage.getItem('plcSymbols');
-      if (saved) { const parsed = JSON.parse(saved); if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.values(parsed).every(value => typeof value === 'string')) return parsed; }
+      const saved = localStorage.getItem('plcSymbolsBySandbox');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch {}
+    let legacySymbols = null;
+    try {
+      const legacy = localStorage.getItem('plcSymbols');
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        if (parsed && typeof parsed === 'object') legacySymbols = parsed;
+      }
     } catch {}
     return {
-      'I:0/0': 'Switch 1',
-      'I:0/1': 'Switch 2',
-      'I:0/2': 'Green PB',
-      'I:0/3': 'Red PB',
-      'O:0/0': 'Amber Lamp 1',
-      'O:0/1': 'Blue Lamp 2',
-      'O:0/2': 'Green Lamp 3',
-      'O:0/3': 'Red Lamp 4',
-      'T4:0': 'Timer 0',
-      'N7:0': 'Int 0'
+      HardwareTrainer: legacySymbols || { ...DEFAULT_PLC1_SYMBOLS },
+      MetalShear: { ...DEFAULT_SHEAR_SYMBOLS }
     };
   });
-  
+
+  const activeSymbols = useMemo(() => {
+    const defaults = activeSandbox === 'MetalShear' ? DEFAULT_SHEAR_SYMBOLS : DEFAULT_PLC1_SYMBOLS;
+    const current = symbolsMap[activeSandbox] || {};
+    return { ...defaults, ...current };
+  }, [symbolsMap, activeSandbox]);
+
   const handleUpdateSymbol = (addr, label) => {
-    setSymbols(prev => {
-      const next = { ...prev, [addr]: label };
-      try { localStorage.setItem('plcSymbols', JSON.stringify(next)); } catch {}
+    setSymbolsMap(prev => {
+      const current = prev[activeSandbox] || (activeSandbox === 'MetalShear' ? DEFAULT_SHEAR_SYMBOLS : DEFAULT_PLC1_SYMBOLS);
+      const next = {
+        ...prev,
+        [activeSandbox]: { ...current, [addr]: label }
+      };
+      try { localStorage.setItem('plcSymbolsBySandbox', JSON.stringify(next)); } catch {}
       return next;
     });
   };
@@ -360,7 +401,7 @@ export function App() {
                     onToggleInput={handleToggleInput}
                     isRunning={isRunning}
                     theme={theme}
-                    symbols={symbols}
+                    symbols={activeSymbols}
                   />
                 ) : (
                   <MetalShearSandbox
@@ -386,7 +427,7 @@ export function App() {
                   isRunning={isRunning}
                   onStop={handleToggleRun}
                   logicIssues={logicIssues}
-                  symbols={symbols}
+                  symbols={activeSymbols}
                   onUpdateSymbol={handleUpdateSymbol}
                 />
               </div>
@@ -412,7 +453,7 @@ export function App() {
         plcData={plcData}
         onToggleInput={handleToggleInput}
         onSetRegister={handleSetRegister}
-        symbols={symbols}
+        symbols={activeSymbols}
         onUpdateSymbol={handleUpdateSymbol}
       />
 
