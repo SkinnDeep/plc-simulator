@@ -989,3 +989,54 @@
   .learning-sidebar { max-height: 190px; flex-shrink: 0; }
   .learning-content { padding: 16px; }
 }
+
+/* iOS Tapback Reaction Address Picker */
+.ios-reaction-picker {
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.light-mode .ios-reaction-picker {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #1e293b !important;
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+}
+
+.light-mode .tail-triangle {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+.light-mode .ios-reaction-picker input {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.light-mode .ios-reaction-picker button.bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+  color: #334155 !important;
+}
+
+.light-mode .ios-reaction-picker button.bg-white\/10:hover {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+  color: #0f172a !important;
+}
+
+.light-mode .ios-reaction-picker .text-slate-300 {
+  color: #334155 !important;
+}
+
+.light-mode .ios-reaction-picker .text-slate-400 {
+  color: #64748b !important;
+}
+
+.light-mode .ios-reaction-picker .bg-white\/\[0\.03\] {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-mode .ios-reaction-picker .bg-white\/\[0\.03\]:hover {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}

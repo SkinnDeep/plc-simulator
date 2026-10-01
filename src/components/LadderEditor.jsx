@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Trash2, GitFork, X, Check, AlertTriangle, ChevronDown, Search, Edit2, Pencil, Sparkles, GripVertical, Tag } from 'lucide-react';
+import { Plus, Trash2, GitFork, X, Check, AlertTriangle, ChevronDown, Search, Edit2, Pencil, Sparkles, GripVertical, Tag, SlidersHorizontal, Lightbulb, Clock, Cpu, Hash, ArrowLeft } from 'lucide-react';
 import { InstructionPalette } from './InstructionPalette';
 import { validateLadderLogic } from '../engine/plcValidator';
 import { parseProgramFile } from '../engine/programFile';
@@ -785,62 +785,42 @@ export function LadderEditor({
   return (
     <div className="ladder-editor bg-[#1e1e1e] border border-[#2d2d2d] overflow-hidden shadow-xl flex flex-col flex-1 focus:outline-none h-full">
       
-      {/* 1. Categorized Instruction & I/O Palette or Morphed I/O Selector Bar */}
+      {/* 1. Categorized Instruction & I/O Palette */}
       <div className="relative">
-        {addressPickerTarget ? (
-          <AddressAndTagSelectorBar
-            target={addressPickerTarget}
-            targetItem={
-              rungs[addressPickerTarget.rungIdx]
-                ? findItemRecursive(rungs[addressPickerTarget.rungIdx].items, addressPickerTarget.itemId)
-                : null
-            }
-            dynamicAddressOptions={dynamicAddressOptions}
-            symbols={symbols}
-            onUpdateSymbol={onUpdateSymbol}
-            onSelectAddress={(chosenAddr) => {
-              handleUpdateItem(addressPickerTarget.rungIdx, addressPickerTarget.itemId, { operand: chosenAddr });
-              setAddressPickerTarget(null);
-            }}
-            onClose={() => setAddressPickerTarget(null)}
-            onAddNewTimer={handleAddNewTimer}
-          />
-        ) : (
-          <InstructionPalette
-            disabled={isRunning}
-            existingTimers={availableTimers}
-            symbols={symbols}
-            activeSandbox={activeSandbox}
-            onAddInstruction={(type, defaultAddr) => {
-              if (selectedItemId) {
-                let extra = {};
-                if (['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ'].includes(type)) {
-                  extra = { params: { sourceA: 'N7:0', sourceB: '1' } };
-                } else if (type === 'LIM') {
-                  extra = { params: { lowLim: '0', test: 'N7:0', highLim: '10' } };
-                } else if (['ADD', 'SUB', 'MUL', 'DIV'].includes(type)) {
-                  extra = { params: { sourceA: 'N7:0', sourceB: '1', dest: 'N7:1' } };
-                } else if (type === 'MOV') {
-                  extra = { params: { source: 'N7:0', dest: 'N7:1' } };
-                } else if (['TON', 'TOF', 'RTO'].includes(type)) {
-                  extra = { params: { pre: 2.0, timeBase: 1.0 } };
-                }
-                const updates = { type, ...extra };
-                if (defaultAddr) updates.operand = defaultAddr;
-                handleUpdateItem(selectedRungIdx, selectedItemId, updates);
-              } else {
-                handleAddInstructionToRung(selectedRungIdx, type, defaultAddr);
+        <InstructionPalette
+          disabled={isRunning}
+          existingTimers={availableTimers}
+          symbols={symbols}
+          activeSandbox={activeSandbox}
+          onAddInstruction={(type, defaultAddr) => {
+            if (selectedItemId) {
+              let extra = {};
+              if (['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ'].includes(type)) {
+                extra = { params: { sourceA: 'N7:0', sourceB: '1' } };
+              } else if (type === 'LIM') {
+                extra = { params: { lowLim: '0', test: 'N7:0', highLim: '10' } };
+              } else if (['ADD', 'SUB', 'MUL', 'DIV'].includes(type)) {
+                extra = { params: { sourceA: 'N7:0', sourceB: '1', dest: 'N7:1' } };
+              } else if (type === 'MOV') {
+                extra = { params: { source: 'N7:0', dest: 'N7:1' } };
+              } else if (['TON', 'TOF', 'RTO'].includes(type)) {
+                extra = { params: { pre: 2.0, timeBase: 1.0 } };
               }
-            }}
-            isBranchMode={isBranchMode}
-            onToggleBranchMode={() => {
-              setIsBranchMode(!isBranchMode);
-              setBranchStartNode(null);
-            }}
-            onSelectIoToken={handlePaletteSelectIo}
-            hasSelection={!!selectedItemId}
-          />
-        )}
+              const updates = { type, ...extra };
+              if (defaultAddr) updates.operand = defaultAddr;
+              handleUpdateItem(selectedRungIdx, selectedItemId, updates);
+            } else {
+              handleAddInstructionToRung(selectedRungIdx, type, defaultAddr);
+            }
+          }}
+          isBranchMode={isBranchMode}
+          onToggleBranchMode={() => {
+            setIsBranchMode(!isBranchMode);
+            setBranchStartNode(null);
+          }}
+          onSelectIoToken={handlePaletteSelectIo}
+          hasSelection={!!selectedItemId}
+        />
         {isRunning && <div className="absolute inset-0 bg-slate-900/40 z-50 cursor-not-allowed" title="Stop the program to edit logic" />}
       </div>
 
@@ -1109,7 +1089,7 @@ export function LadderEditor({
                                             symbols={symbols}
                                             onUpdateSymbol={onUpdateSymbol}
                                             onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
-                                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                            onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id, rect })}
                                             onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
                                             onDelete={() => handleDeleteItem(rIdx, subItem.id)}
                                             onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
@@ -1122,7 +1102,7 @@ export function LadderEditor({
                                             isSelected={selectedItemId === subItem.id}
                                             isActive={isElementActive(rung.id, subItem.id)}
                                             onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
-                                            onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                            onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id, rect })}
                                             onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
                                             onDelete={() => handleDeleteItem(rIdx, subItem.id)}
                                             onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
@@ -1194,7 +1174,7 @@ export function LadderEditor({
                                 symbols={symbols}
                                 onUpdateSymbol={onUpdateSymbol}
                                 onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                                onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                                onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id, rect })}
                                 onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
                                 onDelete={() => handleDeleteItem(rIdx, item.id)}
                                 onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
@@ -1207,7 +1187,7 @@ export function LadderEditor({
                                 isSelected={selectedItemId === item.id}
                                 isActive={isElementActive(rung.id, item.id)}
                                 onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                                onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                                onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id, rect })}
                                 onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
                                 onDelete={() => handleDeleteItem(rIdx, item.id)}
                                 onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
@@ -1304,7 +1284,7 @@ export function LadderEditor({
                                               symbols={symbols}
                                               onUpdateSymbol={onUpdateSymbol}
                                               onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
-                                              onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                              onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id, rect })}
                                               onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
                                               onDelete={() => handleDeleteItem(rIdx, subItem.id)}
                                               onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
@@ -1318,7 +1298,7 @@ export function LadderEditor({
                                               symbols={symbols}
                                               onUpdateSymbol={onUpdateSymbol}
                                               onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
-                                              onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                              onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id, rect })}
                                               onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
                                               onDelete={() => handleDeleteItem(rIdx, subItem.id)}
                                               onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
@@ -1331,7 +1311,7 @@ export function LadderEditor({
                                               isSelected={selectedItemId === subItem.id}
                                               isActive={isElementActive(rung.id, subItem.id)}
                                               onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
-                                              onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id })}
+                                              onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id, rect })}
                                               onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
                                               onDelete={() => handleDeleteItem(rIdx, subItem.id)}
                                               onDropItem={(e) => handleDropOnElement(e, rIdx, subItem.id)}
@@ -1413,7 +1393,7 @@ export function LadderEditor({
                                   symbols={symbols}
                                   onUpdateSymbol={onUpdateSymbol}
                                   onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                                  onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                                  onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id, rect })}
                                   onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
                                   onDelete={() => handleDeleteItem(rIdx, item.id)}
                                   onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
@@ -1428,7 +1408,7 @@ export function LadderEditor({
                                   symbols={symbols}
                                   onUpdateSymbol={onUpdateSymbol}
                                   onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                                  onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                                  onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id, rect })}
                                   onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
                                   onDelete={() => handleDeleteItem(rIdx, item.id)}
                                   onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
@@ -1442,7 +1422,7 @@ export function LadderEditor({
                                   isSelected={selectedItemId === item.id}
                                   isActive={isElementActive(rung.id, item.id)}
                                   onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
-                                  onOpenPicker={() => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id })}
+                                  onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id, rect })}
                                   onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
                                   onDelete={() => handleDeleteItem(rIdx, item.id)}
                                   onDropItem={(e) => handleDropOnElement(e, rIdx, item.id)}
@@ -1533,6 +1513,27 @@ export function LadderEditor({
             </div>
           </div>
         </div>
+      )}
+
+      {/* iOS Tapback Reaction Style Address Picker */}
+      {addressPickerTarget && (
+        <IOSReactionAddressPicker
+          target={addressPickerTarget}
+          targetItem={
+            rungs[addressPickerTarget.rungIdx]
+              ? findItemRecursive(rungs[addressPickerTarget.rungIdx].items, addressPickerTarget.itemId)
+              : null
+          }
+          dynamicAddressOptions={dynamicAddressOptions}
+          symbols={symbols}
+          onUpdateSymbol={onUpdateSymbol}
+          onSelectAddress={(chosenAddr) => {
+            handleUpdateItem(addressPickerTarget.rungIdx, addressPickerTarget.itemId, { operand: chosenAddr });
+            setAddressPickerTarget(null);
+          }}
+          onClose={() => setAddressPickerTarget(null)}
+          onAddNewTimer={handleAddNewTimer}
+        />
       )}
     </div>
   );
@@ -1644,7 +1645,11 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
     >
       {/* Label above - Explicit Dropdown Button */}
       <button 
-        onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          const r = e.currentTarget.getBoundingClientRect();
+          onOpenPicker?.({ top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom });
+        }}
         className={`flex flex-col items-center gap-0.5 text-[10px] font-mono mb-1 px-1.5 py-0.5 rounded border transition-colors ${
           isActive 
             ? 'bg-emerald-900/60 border-emerald-400/70 text-emerald-200' 
@@ -1789,9 +1794,10 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
               <span>TAG FOR {item.operand || 'ITEM'}</span>
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
                   setIsEditingTag(false);
-                  onOpenPicker?.();
+                  const r = e.currentTarget.getBoundingClientRect();
+                  onOpenPicker?.({ top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom });
                 }}
                 className="text-slate-400 hover:text-cyan-200 underline text-[8px] cursor-pointer"
               >
@@ -1909,7 +1915,11 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
           <div className="flex justify-between items-center text-[10px]">
             <span className="text-slate-400 mr-2">Timer</span>
             <button 
-              onClick={(e) => { e.stopPropagation(); onOpenPicker(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                const r = e.currentTarget.getBoundingClientRect();
+                onOpenPicker?.({ top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom });
+              }}
               className={`font-mono font-bold px-1 rounded ${item.operand ? 'text-cyan-300 hover:bg-slate-700' : 'text-slate-500 bg-slate-800'}`}
               title="Click to assign Timer address"
             >
@@ -2033,9 +2043,10 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
               <span>TAG FOR {item.operand || 'T4:0'}</span>
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
                   setIsEditingTag(false);
-                  onOpenPicker?.();
+                  const r = e.currentTarget.getBoundingClientRect();
+                  onOpenPicker?.({ top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom });
                 }}
                 className="text-slate-400 hover:text-purple-200 underline text-[8px] cursor-pointer"
               >
@@ -2247,9 +2258,10 @@ function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, o
               <span>TAG FOR {item.operand || item.params?.sourceA || item.params?.test || 'N7:0'}</span>
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
                   setIsEditingTag(false);
-                  onOpenPicker?.();
+                  const r = e.currentTarget.getBoundingClientRect();
+                  onOpenPicker?.({ top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom });
                 }}
                 className="text-slate-400 hover:text-teal-200 underline text-[8px] cursor-pointer"
               >
@@ -2336,8 +2348,10 @@ function WireJunctionHandle({ rungIdx, itemIdx, isBranchMode, branchStartNode, o
   );
 }
 
-// Top-bar morphing I/O and Tag Selector that replaces the Instruction Palette while choosing an operand
-function AddressAndTagSelectorBar({
+// iOS Tapback Reaction Style Address & I/O Picker
+// Stage 1: Compact horizontal pill with 5 iOS bounce reaction icon categories (Inputs, Outputs, Timers, Relays, Registers) + Close
+// Stage 2: In-place smooth morphing into category selection list with back button, custom address entry, live tag rename, and timer add
+function IOSReactionAddressPicker({
   target,
   targetItem,
   dynamicAddressOptions,
@@ -2347,24 +2361,35 @@ function AddressAndTagSelectorBar({
   onClose,
   onAddNewTimer
 }) {
+  const [selectedCategory, setSelectedCategory] = useState(null); // null (Stage 1) or 'INPUTS' | 'OUTPUTS' | 'TIMERS' | 'RELAYS' | 'DATA'
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'INPUTS' | 'OUTPUTS' | 'RELAYS' | 'TIMERS' | 'DATA'
   const [editingAddr, setEditingAddr] = useState(null);
   const [editingLabel, setEditingLabel] = useState('');
+
+  // Dismiss on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   // Flatten all items with group tags
   const allItems = useMemo(() => {
     const list = [];
-    dynamicAddressOptions.forEach(grp => {
-      const gName = grp.group.toUpperCase();
+    (dynamicAddressOptions || []).forEach(grp => {
+      const gName = (grp.group || '').toUpperCase();
       let tabCategory = 'OTHER';
       if (gName.includes('INPUT')) tabCategory = 'INPUTS';
       else if (gName.includes('OUTPUT')) tabCategory = 'OUTPUTS';
-      else if (gName.includes('INTERNAL') || gName.includes('B3')) tabCategory = 'RELAYS';
+      else if (gName.includes('INTERNAL') || gName.includes('B3') || gName.includes('RELAY')) tabCategory = 'RELAYS';
       else if (gName.includes('TIMER') || gName.includes('T4')) tabCategory = 'TIMERS';
-      else if (gName.includes('REGISTER') || gName.includes('INTEGER') || gName.includes('N7')) tabCategory = 'DATA';
+      else if (gName.includes('REGISTER') || gName.includes('INTEGER') || gName.includes('N7') || gName.includes('DATA')) tabCategory = 'DATA';
 
-      grp.items.forEach(item => {
+      (grp.items || []).forEach(item => {
         const symbolLabel = symbols?.[item.addr] || item.label || '';
         list.push({
           ...item,
@@ -2377,20 +2402,19 @@ function AddressAndTagSelectorBar({
     return list;
   }, [dynamicAddressOptions, symbols]);
 
-  // Filter items based on activeTab and searchQuery
+  // Filter items when a category is selected
   const filteredItems = useMemo(() => {
+    if (!selectedCategory) return [];
     const q = searchQuery.trim().toLowerCase();
     return allItems.filter(item => {
-      if (activeTab !== 'ALL' && item.tabCategory !== activeTab) {
-        return false;
-      }
+      if (item.tabCategory !== selectedCategory) return false;
       if (!q) return true;
       const matchAddr = item.addr.toLowerCase().includes(q);
       const matchLabel = item.displayLabel.toLowerCase().includes(q);
       const matchDesc = (item.desc || '').toLowerCase().includes(q);
       return matchAddr || matchLabel || matchDesc;
     });
-  }, [allItems, activeTab, searchQuery]);
+  }, [allItems, selectedCategory, searchQuery]);
 
   const normalizedQuery = searchQuery.trim().toUpperCase();
   const hasExactMatch = allItems.some(i => i.addr.toUpperCase() === normalizedQuery);
@@ -2410,184 +2434,285 @@ function AddressAndTagSelectorBar({
     setEditingAddr(null);
   };
 
+  // Categories configuration for Stage 1 iOS Reaction Bubbles
+  const categories = [
+    {
+      id: 'INPUTS',
+      label: 'Inputs',
+      badge: 'I',
+      desc: 'Inputs (I:0/x)',
+      icon: SlidersHorizontal,
+      color: 'text-cyan-400 bg-cyan-950/60 border-cyan-500/40 hover:bg-cyan-900/80 hover:border-cyan-400'
+    },
+    {
+      id: 'OUTPUTS',
+      label: 'Outputs',
+      badge: 'O',
+      desc: 'Outputs (O:0/x)',
+      icon: Lightbulb,
+      color: 'text-amber-300 bg-amber-950/60 border-amber-500/40 hover:bg-amber-900/80 hover:border-amber-400'
+    },
+    {
+      id: 'TIMERS',
+      label: 'Timers',
+      badge: 'T4',
+      desc: 'Timers & Bits (T4:x)',
+      icon: Clock,
+      color: 'text-purple-300 bg-purple-950/60 border-purple-500/40 hover:bg-purple-900/80 hover:border-purple-400'
+    },
+    {
+      id: 'RELAYS',
+      label: 'Relays',
+      badge: 'B3',
+      desc: 'Internal Relays (B3:0/x)',
+      icon: Cpu,
+      color: 'text-emerald-300 bg-emerald-950/60 border-emerald-500/40 hover:bg-emerald-900/80 hover:border-emerald-400'
+    },
+    {
+      id: 'DATA',
+      label: 'Data',
+      badge: 'N7',
+      desc: 'Registers (N7:x)',
+      icon: Hash,
+      color: 'text-blue-300 bg-blue-950/60 border-blue-500/40 hover:bg-blue-900/80 hover:border-blue-400'
+    },
+  ];
+
+  const currentCatObj = categories.find(c => c.id === selectedCategory);
+
+  // Position calculation anchored to instruction card
+  const rect = target?.rect;
+  const winW = typeof window !== 'undefined' ? window.innerWidth : 1000;
+  const pickerWidth = selectedCategory ? 340 : 270;
+  let left = winW / 2;
+  let top = 120;
+  let placeBelow = false;
+
+  if (rect) {
+    const centerX = rect.left + rect.width / 2;
+    left = Math.max(pickerWidth / 2 + 12, Math.min(winW - pickerWidth / 2 - 12, centerX));
+    if (rect.top < 230) {
+      placeBelow = true;
+      top = rect.bottom + 12;
+    } else {
+      placeBelow = false;
+      top = rect.top - 12;
+    }
+  }
+
   return (
-    <div className="bg-[#1a1b1e] border-b-2 border-cyan-500/80 p-2 sm:p-2.5 shadow-xl flex flex-col gap-1.5 transition-all animate-in fade-in duration-150">
-      {/* Top Header Row */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-cyan-300 bg-cyan-950/70 border border-cyan-500/40 px-2 py-0.5 rounded">
-            <Tag className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Select I/O for [{targetItem?.type || 'INSTRUCTION'}]</span>
-          </span>
-          <span className="text-[10px] font-mono text-slate-400 hidden md:inline">
-            Current: <strong className="text-amber-300">{targetItem?.operand || '(None)'}</strong>
-          </span>
-        </div>
+    <>
+      {/* Transparent Click-Outside Overlay (NO dark blur over rungs) */}
+      <div 
+        className="fixed inset-0 z-[9990] bg-transparent cursor-default" 
+        onClick={onClose} 
+      />
 
-        {/* Search input */}
-        <div className="relative flex-1 max-w-xs min-w-[150px]">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search address or tag..."
-            className="w-full bg-slate-950 border border-slate-700 text-cyan-300 placeholder-slate-500 text-xs font-mono font-bold pl-8 pr-2 py-1 rounded-md focus:outline-none focus:border-cyan-400"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                if (normalizedQuery) {
-                  onSelectAddress(normalizedQuery);
-                } else if (filteredItems.length > 0) {
-                  onSelectAddress(filteredItems[0].addr);
-                }
-              } else if (e.key === 'Escape') {
-                onClose();
-              }
-            }}
-            autoFocus
-          />
-        </div>
+      {/* Floating iOS Tapback Reaction Bubble Pop-Up */}
+      <div
+        style={{
+          position: 'fixed',
+          left: `${left}px`,
+          top: `${top}px`,
+          transform: placeBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
+          zIndex: 9995
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className="pointer-events-auto"
+      >
+        {/* Downward / Upward Pointer Tail */}
+        <div
+          className={`absolute left-1/2 -translate-x-1/2 w-3.5 h-3.5 rotate-45 pointer-events-none transition-all ${
+            placeBelow
+              ? '-top-1.5 border-t border-l border-white/20 bg-[#17191f]'
+              : '-bottom-1.5 border-b border-r border-white/20 bg-[#17191f]'
+          } tail-triangle`}
+        />
 
-        {/* Category Pills & Close Button */}
-        <div className="flex items-center gap-1.5 ml-auto">
-          {[
-            { id: 'ALL', label: 'All' },
-            { id: 'INPUTS', label: 'Inputs' },
-            { id: 'OUTPUTS', label: 'Outputs' },
-            { id: 'RELAYS', label: 'Relays' },
-            { id: 'TIMERS', label: 'Timers' },
-            { id: 'DATA', label: 'Data' }
-          ].map(tab => (
+        {!selectedCategory ? (
+          /* STAGE 1: iOS Tapback Category Reactions Pill */
+          <div className="ios-reaction-picker flex items-center gap-1.5 p-1.5 bg-[#17191f]/95 backdrop-blur-2xl border border-white/20 rounded-full shadow-[0_16px_40px_rgba(0,0,0,0.6)] animate-in zoom-in-90 fade-in duration-150 select-none">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setSelectedCategory(cat.id);
+                  setSearchQuery('');
+                }}
+                className={`group relative flex flex-col items-center justify-center w-11 h-11 rounded-full border transition-all duration-200 hover:scale-125 hover:-translate-y-1.5 active:scale-95 cursor-pointer shadow-md ${cat.color}`}
+                title={cat.desc}
+              >
+                <cat.icon className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
+                <span className="text-[9px] font-mono font-bold leading-none mt-0.5">{cat.badge}</span>
+
+                {/* Floating tooltip */}
+                <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded bg-slate-900/95 border border-slate-700 text-white text-[10px] font-sans font-semibold tracking-wide whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-50">
+                  {cat.label}
+                </div>
+              </button>
+            ))}
+
+            <div className="w-[1px] h-6 bg-white/20 mx-0.5" />
+
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition cursor-pointer ${
-                activeTab === tab.id
-                  ? 'bg-cyan-500 text-slate-950'
-                  : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
+              onClick={onClose}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              title="Close (Esc)"
             >
-              {tab.label}
+              <X className="w-4 h-4" />
             </button>
-          ))}
+          </div>
+        ) : (
+          /* STAGE 2: Morphed Category Selector */
+          <div className="ios-reaction-picker flex flex-col w-[340px] max-w-[92vw] p-3 bg-[#17191f]/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.65)] text-slate-100 animate-in zoom-in-95 fade-in duration-150">
+            {/* Header with Back button, Category name, and Close */}
+            <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-white/10">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 text-[11px] font-semibold transition cursor-pointer active:scale-95"
+                title="Back to reaction icons"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Categories</span>
+              </button>
 
-          <button
-            onClick={onClose}
-            className="ml-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition cursor-pointer flex items-center gap-1"
-            title="Done / Return to Instruction Palette"
-          >
-            <X className="w-3.5 h-3.5" />
-            <span>Done</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom Horizontal Drag/Click Strip */}
-      <div className="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full">
-        <span className="text-[10px] text-slate-400 font-mono shrink-0 mr-1 flex items-center gap-1">
-          <span>Click to select or drag to rung:</span>
-        </span>
-
-        {/* Custom Address Creation Chip */}
-        {searchQuery.trim() && !hasExactMatch && isValidAddressFormat && (
-          <button
-            onClick={() => onSelectAddress(normalizedQuery)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-cyan-400 bg-cyan-600/30 text-cyan-200 text-xs font-mono font-bold shrink-0 cursor-pointer hover:bg-cyan-600/50"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-            <span>Use Custom: {normalizedQuery}</span>
-          </button>
-        )}
-
-        {/* Add New Timer Button */}
-        {(activeTab === 'TIMERS' || activeTab === 'ALL') && (
-          <button
-            type="button"
-            onClick={() => {
-              if (onAddNewTimer) {
-                const newT = onAddNewTimer();
-                if (newT) onSelectAddress(newT);
-              }
-            }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-purple-500/50 bg-purple-950/40 text-purple-200 hover:bg-purple-900/60 text-xs font-mono font-bold shrink-0 cursor-pointer transition"
-            title="Create and select a new timer (unlimited timers)"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ Add Timer</span>
-          </button>
-        )}
-
-        {filteredItems.map(item => {
-          const isCurrent = targetItem?.operand === item.addr;
-          const isEditing = editingAddr === item.addr;
-
-          const badgeBg = item.tabCategory === 'OUTPUTS'
-            ? 'border-amber-500/40 bg-amber-950/30 text-amber-200 hover:border-amber-400'
-            : item.tabCategory === 'TIMERS'
-            ? 'border-purple-500/40 bg-purple-950/30 text-purple-200 hover:border-purple-400'
-            : item.tabCategory === 'RELAYS'
-            ? 'border-emerald-500/40 bg-emerald-950/30 text-emerald-200 hover:border-emerald-400'
-            : 'border-cyan-500/40 bg-cyan-950/30 text-cyan-200 hover:border-cyan-400';
-
-          return (
-            <div
-              key={item.addr}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('application/json', JSON.stringify({
-                  kind: 'io',
-                  addr: item.addr,
-                  label: item.displayLabel,
-                  isOutput: item.tabCategory === 'OUTPUTS'
-                }));
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              onClick={() => onSelectAddress(item.addr)}
-              className={`border rounded-lg px-2 py-1 text-left flex flex-col justify-center min-w-[76px] cursor-grab active:cursor-grabbing transition shrink-0 group ${badgeBg} ${isCurrent ? 'ring-2 ring-cyan-400' : ''}`}
-              title={`Click to select ${item.addr} (${item.displayLabel}) or drag to rung`}
-            >
-              <div className="flex items-center justify-between gap-1.5">
-                <span className="font-mono text-[10px] font-bold tracking-tight">{item.addr}</span>
-                <button
-                  type="button"
-                  onClick={(e) => handleStartEdit(item.addr, item.displayLabel, e)}
-                  className="opacity-40 group-hover:opacity-100 p-0.5 hover:text-cyan-300 transition"
-                  title="Rename symbol name"
-                >
-                  <Edit2 className="w-2.5 h-2.5" />
-                </button>
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10">
+                {currentCatObj && <currentCatObj.icon className="w-3.5 h-3.5 opacity-90" />}
+                <span className="text-xs font-bold font-mono text-cyan-300">{currentCatObj?.label || 'Select'}</span>
               </div>
 
-              {isEditing ? (
-                <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="text"
-                    value={editingLabel}
-                    onChange={(e) => setEditingLabel(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSaveEdit(item.addr, e);
-                      if (e.key === 'Escape') setEditingAddr(null);
-                    }}
-                    className="text-[9px] bg-slate-900 border border-cyan-400 text-white px-1 rounded font-mono w-20 focus:outline-none"
-                    autoFocus
-                  />
-                  <button
-                    onClick={(e) => handleSaveEdit(item.addr, e)}
-                    className="p-0.5 rounded bg-cyan-600 text-white"
-                  >
-                    <Check className="w-2.5 h-2.5" />
-                  </button>
+              <button
+                onClick={onClose}
+                className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                title="Close"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Quick search input */}
+            <div className="relative mb-2">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                autoFocus
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Search ${currentCatObj?.label.toLowerCase()} or enter address...`}
+                className="w-full bg-black/40 border border-white/15 rounded-lg pl-8 pr-2 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 font-mono"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (normalizedQuery) {
+                      onSelectAddress(normalizedQuery);
+                    } else if (filteredItems.length > 0) {
+                      onSelectAddress(filteredItems[0].addr);
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            {/* Add New Timer Button (when in TIMERS category) */}
+            {selectedCategory === 'TIMERS' && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onAddNewTimer) {
+                    const newT = onAddNewTimer();
+                    if (newT) onSelectAddress(newT);
+                  }
+                }}
+                className="mb-2 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-purple-500/50 bg-purple-950/40 hover:bg-purple-900/60 text-purple-200 text-xs font-mono font-bold cursor-pointer transition active:scale-95"
+                title="Create a new timer register"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Add New Timer</span>
+              </button>
+            )}
+
+            {/* Custom Address Selection Chip */}
+            {searchQuery.trim() && !hasExactMatch && isValidAddressFormat && (
+              <button
+                type="button"
+                onClick={() => onSelectAddress(normalizedQuery)}
+                className="mb-2 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-cyan-400 bg-cyan-600/30 text-cyan-200 text-xs font-mono font-bold cursor-pointer hover:bg-cyan-600/50 transition active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                <span>Use Custom: {normalizedQuery}</span>
+              </button>
+            )}
+
+            {/* Scrollable list of items in selected category */}
+            <div className="flex flex-col gap-1 max-h-56 overflow-y-auto pr-1">
+              {filteredItems.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-400 font-mono">
+                  No matching items found
                 </div>
               ) : (
-                <span className="text-[9px] truncate max-w-[95px] font-medium leading-tight opacity-85">
-                  {item.displayLabel}
-                </span>
+                filteredItems.map((item) => {
+                  const isCurrent = targetItem?.operand === item.addr;
+                  const isEditing = editingAddr === item.addr;
+
+                  return (
+                    <div
+                      key={item.addr}
+                      onClick={() => onSelectAddress(item.addr)}
+                      className={`flex items-center justify-between p-1.5 rounded-lg border transition cursor-pointer group ${
+                        isCurrent
+                          ? 'border-cyan-400 bg-cyan-950/40 text-cyan-200 ring-1 ring-cyan-400'
+                          : 'border-white/5 hover:border-white/20 bg-white/[0.03] hover:bg-white/[0.08]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono font-bold text-xs px-1.5 py-0.5 rounded bg-black/40 shrink-0 text-cyan-300">
+                          {item.addr}
+                        </span>
+                        {isEditing ? (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={editingLabel}
+                              onChange={(e) => setEditingLabel(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveEdit(item.addr, e);
+                                if (e.key === 'Escape') setEditingAddr(null);
+                              }}
+                              className="text-[10px] bg-slate-900 border border-cyan-400 text-white px-1.5 py-0.5 rounded font-mono w-28 focus:outline-none"
+                              autoFocus
+                            />
+                            <button
+                              onClick={(e) => handleSaveEdit(item.addr, e)}
+                              className="p-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white"
+                            >
+                              <Check className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-300 truncate max-w-[170px]" title={item.displayLabel}>
+                            {item.displayLabel || <span className="italic text-slate-500">No tag</span>}
+                          </span>
+                        )}
+                      </div>
+
+                      {!isEditing && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleStartEdit(item.addr, item.displayLabel, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:text-cyan-300 text-slate-400 rounded transition"
+                          title="Rename symbol name"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
-          );
-        })}
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }
 
