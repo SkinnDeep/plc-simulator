@@ -353,8 +353,413 @@
 .light-mode [class*="bg-blue-900/"] { background-color: #e8effa; color: #4466ad; }
 .light-mode #bit-monitor h3 { color: var(--ink); }
 .light-mode .ladder-rung { background-color: var(--surface); }
-.light-mode .instruction-button, .light-mode .palette-tabs button { color: var(--muted); }
-.light-mode .palette-tabs button[aria-pressed="true"] { color: var(--ink); }
+
+/* Palette Tabs & Buttons in Light Mode */
+.light-mode .palette-tabs button { color: var(--muted); }
+.light-mode .palette-tabs button:hover { color: var(--ink); }
+.light-mode .palette-tabs button[aria-pressed="true"] { color: var(--ink) !important; border-bottom-color: #0284c7 !important; }
+
+.light-mode .instruction-button {
+  background-color: var(--surface);
+  border-color: var(--line-strong);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.light-mode .instruction-button:is([class*="bg-cyan-950"], [class*="border-cyan-"]) {
+  background-color: #ecfeff !important;
+  border-color: #a5f3fc !important;
+  color: #0e7490 !important;
+}
+.light-mode .instruction-button:is([class*="bg-cyan-950"], [class*="border-cyan-"]):hover {
+  background-color: #cffafe !important;
+  border-color: #06b6d4 !important;
+  color: #083344 !important;
+}
+.light-mode .instruction-button:is([class*="bg-amber-950"], [class*="border-amber-"]) {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+  color: #b45309 !important;
+}
+.light-mode .instruction-button:is([class*="bg-amber-950"], [class*="border-amber-"]):hover {
+  background-color: #fef3c7 !important;
+  border-color: #f59e0b !important;
+  color: #78350f !important;
+}
+.light-mode .instruction-button:is([class*="bg-purple-950"], [class*="border-purple-"]) {
+  background-color: #faf5ff !important;
+  border-color: #e9d5ff !important;
+  color: #7e22ce !important;
+}
+.light-mode .instruction-button:is([class*="bg-purple-950"], [class*="border-purple-"]):hover {
+  background-color: #f3e8ff !important;
+  border-color: #a855f7 !important;
+  color: #581c87 !important;
+}
+.light-mode .instruction-button:is([class*="bg-teal-950"], [class*="border-teal-"]) {
+  background-color: #f0fdfa !important;
+  border-color: #99f6e4 !important;
+  color: #0f766e !important;
+}
+.light-mode .instruction-button:is([class*="bg-teal-950"], [class*="border-teal-"]):hover {
+  background-color: #ccfbf1 !important;
+  border-color: #14b8a6 !important;
+  color: #134e4a !important;
+}
+.light-mode .instruction-button:is([class*="bg-orange-950"], [class*="border-orange-"]) {
+  background-color: #fff7ed !important;
+  border-color: #fed7aa !important;
+  color: #c2410c !important;
+}
+.light-mode .instruction-button:is([class*="bg-orange-950"], [class*="border-orange-"]):hover {
+  background-color: #ffedd5 !important;
+  border-color: #f97316 !important;
+  color: #7c2d12 !important;
+}
+.light-mode .instruction-button:is([class*="bg-blue-950"], [class*="border-blue-"], [class*="bg-blue-500"]) {
+  background-color: #eff6ff !important;
+  border-color: #bfdbfe !important;
+  color: #1d4ed8 !important;
+}
+.light-mode .instruction-button:is([class*="bg-blue-950"], [class*="border-blue-"], [class*="bg-blue-500"]):hover {
+  background-color: #dbeafe !important;
+  border-color: #3b82f6 !important;
+  color: #1e3a8a !important;
+}
+.light-mode .instruction-button:is([class*="bg-sky-950"], [class*="border-sky-"]) {
+  background-color: #f0f9ff !important;
+  border-color: #bae6fd !important;
+  color: #0369a1 !important;
+}
+.light-mode .instruction-button:is([class*="bg-sky-950"], [class*="border-sky-"]):hover {
+  background-color: #e0f2fe !important;
+  border-color: #0284c7 !important;
+  color: #0c4a6e !important;
+}
+.light-mode .instruction-button:is([class*="bg-indigo-950"], [class*="border-indigo-"]) {
+  background-color: #eef2ff !important;
+  border-color: #c7d2fe !important;
+  color: #4338ca !important;
+}
+.light-mode .instruction-button:is([class*="bg-indigo-950"], [class*="border-indigo-"]):hover {
+  background-color: #e0e7ff !important;
+  border-color: #6366f1 !important;
+  color: #312e81 !important;
+}
+
+/* Rung Instruction Cards in Light Mode */
+.light-mode .instruction-card {
+  background-color: var(--surface);
+  border-color: var(--line-strong);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.light-mode .instruction-card.border-cyan-500\/30 {
+  border-color: #a5f3fc;
+  background-color: #f0fdfa;
+}
+.light-mode .instruction-card.border-cyan-500\/30:hover {
+  border-color: #06b6d4;
+  background-color: #ecfeff;
+}
+.light-mode .instruction-card.border-amber-500\/30 {
+  border-color: #fde68a;
+  background-color: #fffbeb;
+}
+.light-mode .instruction-card.border-amber-500\/30:hover {
+  border-color: #f59e0b;
+  background-color: #fef3c7;
+}
+.light-mode .instruction-card.border-emerald-500\/60,
+.light-mode .instruction-card[class*="border-emerald"] {
+  background-color: #ecfdf5 !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25) !important;
+}
+.light-mode .instruction-card.border-cyan-400 {
+  background-color: #e0f2fe !important;
+  border-color: #0284c7 !important;
+}
+.light-mode .instruction-card.border-amber-400 {
+  background-color: #fef3c7 !important;
+  border-color: #d97706 !important;
+}
+
+/* Address dropdown button on card */
+.light-mode .instruction-card button[title="Click to assign I/O address"]:is([class*="bg-cyan"]) {
+  background-color: #e0f2fe !important;
+  border-color: #7dd3fc !important;
+  color: #0369a1 !important;
+}
+.light-mode .instruction-card button[title="Click to assign I/O address"]:is([class*="bg-cyan"]):hover {
+  background-color: #bae6fd !important;
+}
+.light-mode .instruction-card button[title="Click to assign I/O address"]:is([class*="bg-amber"]) {
+  background-color: #fef3c7 !important;
+  border-color: #fde68a !important;
+  color: #92400e !important;
+}
+.light-mode .instruction-card button[title="Click to assign I/O address"]:is([class*="bg-amber"]):hover {
+  background-color: #fde68a !important;
+}
+.light-mode .instruction-card button[title="Click to assign I/O address"]:is([class*="bg-emerald"]) {
+  background-color: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+  color: #065f46 !important;
+}
+.light-mode .instruction-card button[title="Click to assign I/O address"] span:last-child {
+  color: var(--muted) !important;
+}
+
+/* Card symbol highlight when selected */
+.light-mode .instruction-card .bg-black\/40 {
+  background-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+/* Quick coil switcher [ ( ) | (L) | (U) ] */
+.light-mode .instruction-card .bg-black\/50 {
+  background-color: var(--raised) !important;
+  border-color: #fcd34d !important;
+}
+.light-mode .instruction-card .bg-black\/50 button {
+  color: var(--muted) !important;
+}
+.light-mode .instruction-card .bg-black\/50 button:hover {
+  color: var(--ink) !important;
+  background-color: var(--line) !important;
+}
+.light-mode .instruction-card .bg-black\/50 button.bg-amber-500\/40 {
+  background-color: #f59e0b !important;
+  color: #ffffff !important;
+}
+
+/* Trash hover delete button */
+.light-mode div:has(> button[title="Delete instruction"]),
+.light-mode [class*="bg-[#1e222b]"] {
+  background-color: var(--surface) !important;
+  border-color: var(--line-strong) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
+}
+.light-mode button[title="Delete instruction"],
+.light-mode button[aria-label="Delete instruction"] {
+  color: #ef4444 !important;
+}
+.light-mode button[title="Delete instruction"]:hover,
+.light-mode button[aria-label="Delete instruction"]:hover {
+  background-color: #fee2e2 !important;
+}
+
+/* Timer & Math instruction blocks */
+.light-mode [class*="bg-[#22252a]"] {
+  background-color: var(--surface) !important;
+}
+.light-mode [class*="bg-[#1a1c20]"] {
+  background-color: var(--raised) !important;
+}
+.light-mode [class*="bg-[#1e2025]"] {
+  background-color: var(--raised) !important;
+}
+.light-mode [class*="border-[#3c414a]"] {
+  border-color: var(--line) !important;
+}
+.light-mode div:has(> [class*="bg-[#1a1c20]"]):is([class*="bg-purple-950"]) {
+  background-color: #faf5ff !important;
+  border-color: #d8b4fe !important;
+}
+.light-mode div:has(> [class*="bg-[#1a1c20]"]):is([class*="bg-teal-950"]) {
+  background-color: #f0fdfa !important;
+  border-color: #99f6e4 !important;
+}
+.light-mode div:has(> [class*="bg-orange-950"]):is([class*="bg-orange-950"]) {
+  background-color: #fff7ed !important;
+  border-color: #fed7aa !important;
+}
+
+/* Inputs and selects inside ladder editor */
+.light-mode .ladder-editor input:not([type="checkbox"]),
+.light-mode .ladder-editor select {
+  background-color: var(--raised) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--ink) !important;
+}
+.light-mode .ladder-editor input:hover,
+.light-mode .ladder-editor select:hover {
+  border-color: #0284c7 !important;
+}
+.light-mode .ladder-editor span:is([class*="bg-slate-900"]) {
+  background-color: var(--raised) !important;
+  color: var(--ink) !important;
+}
+.light-mode [class*="bg-[#1e2025]"] .bg-slate-700 {
+  background-color: #cbd5e1 !important;
+}
+.light-mode .ladder-editor span:is([class*="bg-slate-800"][class*="text-amber-300"]) {
+  background-color: #fef3c7 !important;
+  border-color: #fde68a !important;
+  color: #92400e !important;
+}
+.light-mode .ladder-editor button:is([class*="bg-slate-800"]) {
+  background-color: var(--raised) !important;
+  color: var(--muted) !important;
+}
+
+/* Parallel Branches on Rungs */
+.light-mode .ladder-rung [class*="bg-slate-950/50"] {
+  background-color: var(--raised) !important;
+  border-color: var(--line-strong) !important;
+}
+.light-mode .ladder-rung [class*="bg-slate-900/90"] {
+  background-color: var(--surface) !important;
+  border-color: var(--line) !important;
+}
+.light-mode .ladder-rung span:is([class*="bg-slate-800"]):has(+ *) {
+  background-color: var(--raised) !important;
+  color: var(--ink) !important;
+}
+.light-mode .ladder-rung button:is([class*="bg-slate-800"][class*="text-cyan-300"]) {
+  background-color: #ecfeff !important;
+  border-color: #a5f3fc !important;
+  color: #0e7490 !important;
+}
+.light-mode .ladder-rung button:is([class*="bg-slate-800"][class*="text-cyan-300"]):hover {
+  background-color: #cffafe !important;
+  border-color: #06b6d4 !important;
+}
+.light-mode .ladder-rung button:is([class*="bg-slate-800"][class*="text-amber-300"]) {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+  color: #b45309 !important;
+}
+.light-mode .ladder-rung button:is([class*="bg-slate-800"][class*="text-amber-300"]):hover {
+  background-color: #fef3c7 !important;
+  border-color: #f59e0b !important;
+}
+.light-mode .ladder-rung button:is([class*="bg-indigo-950"]) {
+  background-color: #eef2ff !important;
+  border-color: #c7d2fe !important;
+  color: #4338ca !important;
+}
+.light-mode .ladder-rung button:is([class*="bg-indigo-950"]):hover {
+  background-color: #e0e7ff !important;
+  border-color: #6366f1 !important;
+}
+.light-mode .ladder-rung button:is([class*="bg-amber-950"]) {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+  color: #b45309 !important;
+}
+.light-mode .ladder-rung button:is([class*="bg-amber-950"]):hover {
+  background-color: #fef3c7 !important;
+  border-color: #f59e0b !important;
+}
+
+/* Wires, Rails, and Node Dots */
+.light-mode .rung-wire:not(.bg-emerald-400) {
+  background-color: #cbd5e1 !important;
+}
+.light-mode .power-rail:not(.bg-emerald-400) {
+  background-color: #94a3b8 !important;
+}
+.light-mode .branch-dot-container {
+  background-color: var(--surface) !important;
+}
+.light-mode .branch-dot-container > div:not(.bg-emerald-500) {
+  background-color: #94a3b8 !important;
+}
+
+/* Action Buttons & Placeholders */
+.light-mode .add-instruction {
+  background-color: var(--surface) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--muted) !important;
+}
+.light-mode .add-instruction:hover {
+  background-color: var(--raised) !important;
+  border-color: #06b6d4 !important;
+  color: #0e7490 !important;
+}
+.light-mode .add-rung-placeholder {
+  background-color: var(--surface) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--muted) !important;
+}
+.light-mode .add-rung-placeholder:hover {
+  background-color: var(--raised) !important;
+  border-color: #06b6d4 !important;
+  color: #0e7490 !important;
+}
+
+/* Rung Header & Toolbar */
+.light-mode .rung-index:not(.bg-cyan-500):not(.bg-emerald-500) {
+  background-color: var(--raised) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line) !important;
+}
+.light-mode .rung-heading input {
+  color: var(--ink) !important;
+}
+.light-mode .rung-heading input::placeholder {
+  color: var(--muted) !important;
+}
+.light-mode .editor-toolbar {
+  background-color: var(--surface) !important;
+  border-color: var(--line) !important;
+}
+.light-mode .editor-toolbar button:is([class*="border-slate-600"]) {
+  background-color: var(--surface) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--ink) !important;
+}
+.light-mode .editor-toolbar button:is([class*="border-slate-600"]):hover {
+  background-color: var(--raised) !important;
+}
+.light-mode .editor-toolbar button:is([class*="border-red-900"]) {
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 !important;
+  color: #e11d48 !important;
+}
+.light-mode .editor-toolbar button:is([class*="border-red-900"]):hover {
+  background-color: #ffe4e6 !important;
+  border-color: #fda4af !important;
+}
+.light-mode .editor-toolbar span:is([class*="bg-slate-800"]) {
+  background-color: var(--raised) !important;
+  color: var(--muted) !important;
+}
+
+/* Metal Shear Reset Button & Simulation Overlays */
+.light-mode [class*="bg-slate-900/85"] {
+  background-color: var(--surface) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+.light-mode [class*="bg-slate-900/85"]:hover {
+  background-color: var(--raised) !important;
+  border-color: #d97706 !important;
+  color: #b45309 !important;
+}
+
+/* Modals & Dialogs */
+.light-mode [role="dialog"],
+.light-mode .fixed.inset-0 > div:is([class*="bg-slate-900"]) {
+  background-color: var(--surface) !important;
+  border-color: var(--line) !important;
+}
+.light-mode [role="dialog"] input,
+.light-mode .fixed.inset-0 input {
+  background-color: var(--inset) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--ink) !important;
+}
+.light-mode [role="dialog"] button:is([class*="bg-slate-950"]),
+.light-mode .fixed.inset-0 button:is([class*="bg-slate-950"]) {
+  background-color: var(--surface) !important;
+  border-color: var(--line) !important;
+}
+.light-mode [role="dialog"] button:is([class*="bg-slate-950"]):hover,
+.light-mode .fixed.inset-0 button:is([class*="bg-slate-950"]):hover {
+  background-color: var(--raised) !important;
+  border-color: #0284c7 !important;
+}
+
 .light-mode ::-webkit-scrollbar-thumb { background: #c1c5cd; }
 .glow-green { box-shadow: 0 0 10px #22c55e55; }
 .glow-blue { box-shadow: 0 0 10px #38bdf855; }
@@ -449,7 +854,38 @@
 }
 
 .light-mode .ladder-editor, .light-mode .bench-switch, .light-mode .mobile-view-switch { background: transparent; }
-.light-mode .momentary-control > span { color: color-mix(in srgb,var(--signal) 48%,#18252a); }
+.light-mode .momentary-control {
+  border: 1.5px solid color-mix(in srgb, var(--signal) 75%, #ffffff) !important;
+  background: color-mix(in srgb, var(--signal) 16%, #ffffff) !important;
+  color: color-mix(in srgb, var(--signal) 80%, #0f172a) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), inset 0 1px 0 #ffffff !important;
+}
+.light-mode .momentary-control:hover {
+  background: color-mix(in srgb, var(--signal) 28%, #ffffff) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), inset 0 1px 0 #ffffff !important;
+}
+.light-mode .momentary-control:active,
+.light-mode .momentary-control[aria-pressed="true"],
+.light-mode .momentary-control.pressed {
+  background: var(--signal) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--signal) 55%, transparent), inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+.light-mode .momentary-control > span {
+  color: inherit !important;
+}
+.light-mode .switch-track {
+  background: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+.light-mode .switch-track > span {
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+.light-mode .switch-control[aria-pressed="true"] .switch-track {
+  background: #10b981 !important;
+  border-color: #059669 !important;
+}
 .learning-sidebar button { border-color: transparent; background: transparent; }
 .learning-sidebar button[aria-pressed="true"] { border-color: var(--line); background: var(--raised); color: var(--ink); }
 .learning-sidebar button > div > span:first-child { font-size: 12px; font-weight: 500; }

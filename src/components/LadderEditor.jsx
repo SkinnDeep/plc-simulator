@@ -1373,7 +1373,7 @@ export function LadderEditor({
 
                 {/* L2 Neutral Rail (Right) */}
                 <div className="flex flex-col items-center shrink-0">
-                  <div className="power-rail w-2 h-16 rounded-full bg-slate-500" />
+                  <div className="power-rail power-rail-right w-2 h-16 rounded-full bg-slate-500" />
                   <span className="text-[10px] font-mono font-bold text-slate-500 mt-1">L2</span>
                 </div>
               </div>
@@ -1502,7 +1502,7 @@ export function LadderEditor({
   );
 }
 
-// Hook that reveals the trash button ~1 second after hovering over a rung element
+// Hook that reveals the trash button ~0.5 seconds after hovering over a rung element
 function useHoverTrash() {
   const [hoverTrash, setHoverTrash] = useState(false);
   const timerRef = useRef(null);
@@ -1511,7 +1511,7 @@ function useHoverTrash() {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setHoverTrash(true);
-    }, 900); // 900ms delay (~1s) to prevent accidental popups when skimming
+    }, 500); // 500ms delay (0.5s) for responsive hover delete select
   };
 
   const handleMouseLeave = () => {
@@ -1948,7 +1948,7 @@ function BranchDotNode({ rungIdx, itemIdx, isBranchMode, branchStartNode, onNode
   
   return (
     <div 
-      className="flex items-center justify-center w-4 h-4 cursor-pointer relative z-20 group bg-slate-900 mx-1" 
+      className="branch-dot-container flex items-center justify-center w-4 h-4 cursor-pointer relative z-20 group bg-slate-900 mx-1" 
       onClick={(e) => { e.stopPropagation(); onNodeClick(rungIdx, itemIdx, isOutputZone); }}
     >
       <div className={`transition-all rounded-[1px] ${
