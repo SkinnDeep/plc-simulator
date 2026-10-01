@@ -285,29 +285,68 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
 
           {/* Status Overlay: Limit Switches & Sensors */}
           <div className="absolute top-2 right-2 flex flex-col gap-1 z-20 text-[9px] font-mono">
-            <div className={`px-2 py-0.5 rounded border flex items-center gap-1.5 transition-colors ${
-              uiState.sensors.UP_LS 
-                ? 'bg-cyan-950/70 border-cyan-500/50 text-cyan-300' 
-                : 'bg-slate-900/60 border-slate-700/50 text-slate-500'
-            }`}>
+            <div
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/json', JSON.stringify({
+                  kind: 'io',
+                  addr: 'I:0/4',
+                  label: symbols?.['I:0/4'] || 'UP_LS',
+                  isOutput: false
+                }));
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              className={`px-2 py-0.5 rounded border flex items-center gap-1.5 transition-colors cursor-grab active:cursor-grabbing hover:border-cyan-400 ${
+                uiState.sensors.UP_LS 
+                  ? 'bg-cyan-950/70 border-cyan-500/50 text-cyan-300' 
+                  : 'bg-slate-900/60 border-slate-700/50 text-slate-400'
+              }`}
+              title="Drag UP_LS (I:0/4) to rung or contact"
+            >
               <span className={`w-1.5 h-1.5 rounded-full ${uiState.sensors.UP_LS ? 'bg-cyan-400 shadow-[0_0_6px_#22d3ee]' : 'bg-slate-600'}`} />
-              <span>UP_LS (I:0/4)</span>
+              <span><span className="opacity-40">⠿</span> UP_LS (I:0/4)</span>
             </div>
-            <div className={`px-2 py-0.5 rounded border flex items-center gap-1.5 transition-colors ${
-              uiState.sensors.DOWN_LS 
-                ? 'bg-amber-950/70 border-amber-500/50 text-amber-300' 
-                : 'bg-slate-900/60 border-slate-700/50 text-slate-500'
-            }`}>
+            <div
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/json', JSON.stringify({
+                  kind: 'io',
+                  addr: 'I:0/3',
+                  label: symbols?.['I:0/3'] || 'DOWN_LS',
+                  isOutput: false
+                }));
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              className={`px-2 py-0.5 rounded border flex items-center gap-1.5 transition-colors cursor-grab active:cursor-grabbing hover:border-amber-400 ${
+                uiState.sensors.DOWN_LS 
+                  ? 'bg-amber-950/70 border-amber-500/50 text-amber-300' 
+                  : 'bg-slate-900/60 border-slate-700/50 text-slate-400'
+              }`}
+              title="Drag DOWN_LS (I:0/3) to rung or contact"
+            >
               <span className={`w-1.5 h-1.5 rounded-full ${uiState.sensors.DOWN_LS ? 'bg-amber-400 shadow-[0_0_6px_#f59e0b]' : 'bg-slate-600'}`} />
-              <span>DOWN_LS (I:0/3)</span>
+              <span><span className="opacity-40">⠿</span> DOWN_LS (I:0/3)</span>
             </div>
-            <div className={`px-2 py-0.5 rounded border flex items-center gap-1.5 transition-colors ${
-              uiState.sensors.PROX 
-                ? 'bg-yellow-950/70 border-yellow-500/50 text-yellow-300' 
-                : 'bg-slate-900/60 border-slate-700/50 text-slate-500'
-            }`}>
+            <div
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/json', JSON.stringify({
+                  kind: 'io',
+                  addr: 'I:0/2',
+                  label: symbols?.['I:0/2'] || 'PROX',
+                  isOutput: false
+                }));
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              className={`px-2 py-0.5 rounded border flex items-center gap-1.5 transition-colors cursor-grab active:cursor-grabbing hover:border-yellow-400 ${
+                uiState.sensors.PROX 
+                  ? 'bg-yellow-950/70 border-yellow-500/50 text-yellow-300' 
+                  : 'bg-slate-900/60 border-slate-700/50 text-slate-400'
+              }`}
+              title="Drag PROX (I:0/2) to rung or contact"
+            >
               <span className={`w-1.5 h-1.5 rounded-full ${uiState.sensors.PROX ? 'bg-yellow-400 shadow-[0_0_6px_#eab308]' : 'bg-slate-600'}`} />
-              <span>PROX (I:0/2)</span>
+              <span><span className="opacity-40">⠿</span> PROX (I:0/2)</span>
             </div>
           </div>
 
@@ -323,8 +362,22 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
             <div className={`w-2.5 h-2.5 rounded-full border ${conv1On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
             <div className={`w-2.5 h-2.5 rounded-full border ${conv1On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
           </div>
-          <div className="absolute bottom-0 text-[8px] font-mono text-slate-400 flex items-center gap-1" style={{ left: toPct(SHEAR_X / 2 - 14) }}>
-            <span className={conv1On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>CONV1 (O:0/0)</span>
+          <div
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('application/json', JSON.stringify({
+                kind: 'io',
+                addr: 'O:0/0',
+                label: symbols?.['O:0/0'] || 'CONV1',
+                isOutput: true
+              }));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
+            className="absolute bottom-0 text-[8px] font-mono flex items-center gap-1 cursor-grab active:cursor-grabbing hover:bg-slate-800/90 px-1 rounded border border-transparent hover:border-slate-600"
+            style={{ left: toPct(SHEAR_X / 2 - 14) }}
+            title="Drag CONV1 (O:0/0) to rung or coil"
+          >
+            <span className={conv1On ? 'text-emerald-400 font-bold' : 'text-slate-400'}><span className="opacity-40">⠿ </span>CONV1 (O:0/0)</span>
           </div>
 
           {/* Conveyor 2 */}
@@ -339,8 +392,22 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
             <div className={`w-2.5 h-2.5 rounded-full border ${conv2On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
             <div className={`w-2.5 h-2.5 rounded-full border ${conv2On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
           </div>
-          <div className="absolute bottom-0 text-[8px] font-mono text-slate-400 flex items-center gap-1" style={{ left: toPct((SHEAR_X + END_CONV2_X) / 2 - 14) }}>
-            <span className={conv2On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>CONV2 (O:0/1)</span>
+          <div
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('application/json', JSON.stringify({
+                kind: 'io',
+                addr: 'O:0/1',
+                label: symbols?.['O:0/1'] || 'CONV2',
+                isOutput: true
+              }));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
+            className="absolute bottom-0 text-[8px] font-mono flex items-center gap-1 cursor-grab active:cursor-grabbing hover:bg-slate-800/90 px-1 rounded border border-transparent hover:border-slate-600"
+            style={{ left: toPct((SHEAR_X + END_CONV2_X) / 2 - 14) }}
+            title="Drag CONV2 (O:0/1) to rung or coil"
+          >
+            <span className={conv2On ? 'text-emerald-400 font-bold' : 'text-slate-400'}><span className="opacity-40">⠿ </span>CONV2 (O:0/1)</span>
           </div>
 
           {/* Conveyor 3 */}
@@ -355,8 +422,22 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
             <div className={`w-2.5 h-2.5 rounded-full border ${conv3On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
             <div className={`w-2.5 h-2.5 rounded-full border ${conv3On ? 'border-emerald-400 animate-spin bg-emerald-500/30' : 'border-slate-600'}`} />
           </div>
-          <div className="absolute bottom-0 text-[8px] font-mono text-slate-400 flex items-center gap-1" style={{ left: toPct((END_CONV2_X + DROP_X) / 2 - 14) }}>
-            <span className={conv3On ? 'text-emerald-400 font-bold' : 'text-slate-500'}>CONV3 (O:0/3)</span>
+          <div
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('application/json', JSON.stringify({
+                kind: 'io',
+                addr: 'O:0/3',
+                label: symbols?.['O:0/3'] || 'CONV3',
+                isOutput: true
+              }));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
+            className="absolute bottom-0 text-[8px] font-mono flex items-center gap-1 cursor-grab active:cursor-grabbing hover:bg-slate-800/90 px-1 rounded border border-transparent hover:border-slate-600"
+            style={{ left: toPct((END_CONV2_X + DROP_X) / 2 - 14) }}
+            title="Drag CONV3 (O:0/3) to rung or coil"
+          >
+            <span className={conv3On ? 'text-emerald-400 font-bold' : 'text-slate-400'}><span className="opacity-40">⠿ </span>CONV3 (O:0/3)</span>
           </div>
 
           {/* The Continuous Sheet / Strip */}
@@ -429,7 +510,23 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
         <div className="io-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', maxWidth: '270px', margin: '0 auto' }}>
           {/* Start Pushbutton (I:0/0 N.O.) */}
           <div className={`io-cell ${isStartPressed ? 'active-cell' : ''}`} style={{ '--signal': '#10b981' }}>
-            <span className="io-address">I:0/0</span>
+            <span
+              draggable
+              onDragStart={(e) => {
+                e.stopPropagation();
+                e.dataTransfer.setData('application/json', JSON.stringify({
+                  kind: 'io',
+                  addr: 'I:0/0',
+                  label: symbols?.['I:0/0'] || 'START_PB',
+                  isOutput: false
+                }));
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              className="io-address flex items-center gap-1 cursor-grab active:cursor-grabbing hover:text-cyan-300 hover:bg-cyan-950/40 px-1 py-0.5 rounded transition"
+              title="Drag I:0/0 (START_PB) to rung or contact"
+            >
+              <span className="opacity-40 text-[9px]">⠿</span>I:0/0
+            </span>
             <button
               className={`momentary-control ${isStartPressed ? 'pressed' : ''}`}
               aria-label="Start Pushbutton (N.O.)"
@@ -460,7 +557,7 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
             >
               <span>START</span>
             </button>
-            <span className="io-name">Start (N.O.)</span>
+            <span className="io-name">{symbols?.['I:0/0'] || 'Start (N.O.)'}</span>
             <span className={`io-value ${isStartPressed ? 'on' : ''}`}>
               <i />{isStartPressed ? 'Pressed' : 'Normal'}<b>{isStartPressed ? '1' : '0'}</b>
             </span>
@@ -468,7 +565,23 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
 
           {/* Stop Pushbutton (I:0/1 N.C.) */}
           <div className={`io-cell ${isStopPressed ? 'active-cell' : ''}`} style={{ '--signal': '#ef4444' }}>
-            <span className="io-address">I:0/1</span>
+            <span
+              draggable
+              onDragStart={(e) => {
+                e.stopPropagation();
+                e.dataTransfer.setData('application/json', JSON.stringify({
+                  kind: 'io',
+                  addr: 'I:0/1',
+                  label: symbols?.['I:0/1'] || 'STOP_PB',
+                  isOutput: false
+                }));
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              className="io-address flex items-center gap-1 cursor-grab active:cursor-grabbing hover:text-cyan-300 hover:bg-cyan-950/40 px-1 py-0.5 rounded transition"
+              title="Drag I:0/1 (STOP_PB) to rung or contact"
+            >
+              <span className="opacity-40 text-[9px]">⠿</span>I:0/1
+            </span>
             <button
               className={`momentary-control ${isStopPressed ? 'pressed' : ''}`}
               aria-label="Stop Pushbutton (N.C.)"
@@ -499,7 +612,7 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning }) {
             >
               <span>STOP</span>
             </button>
-            <span className="io-name">Stop (N.C.)</span>
+            <span className="io-name">{symbols?.['I:0/1'] || 'Stop (N.C.)'}</span>
             <span className={`io-value ${isStopPressed ? 'on' : ''}`}>
               <i />{isStopPressed ? 'Pressed' : 'Normal'}<b>{isBitOn('I:0/1') ? '1' : '0'}</b>
             </span>

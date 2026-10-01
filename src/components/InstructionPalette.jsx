@@ -8,7 +8,9 @@ export function InstructionPalette({
   onToggleBranchMode,
   onSelectIoToken,
   hasSelection,
-  existingTimers = ['T4:0']
+  existingTimers = ['T4:0'],
+  symbols = {},
+  activeSandbox = 'HardwareTrainer'
 }) {
   const [activeCategory, setActiveCategory] = useState('Bit');
   const [mappedTimer, setMappedTimer] = useState(existingTimers[0] || 'T4:0');
@@ -20,7 +22,7 @@ export function InstructionPalette({
     }
   }, [existingTimers, mappedTimer]);
 
-  const categories = ['Bit', 'Timers', 'Math', 'Move / logic', 'Compare'];
+  const categories = ['Bit', 'Timers', 'I/O & Tags', 'Math', 'Move / logic', 'Compare'];
 
   const bitIcons = [
     { type: 'BRANCH', symbol: '┼──┼', name: 'Branch', isBranch: true },
@@ -117,6 +119,35 @@ export function InstructionPalette({
     </div>
   );
 
+  const availableTags = React.useMemo(() => {
+    const list = [];
+    const inputCount = activeSandbox === 'MetalShear' ? 5 : 4;
+    for (let i = 0; i < inputCount; i++) {
+      const addr = `I:0/${i}`;
+      list.push({ addr, label: symbols?.[addr] || (activeSandbox === 'MetalShear' ? ['START_PB', 'STOP_PB', 'PROX', 'DOWN_LS', 'UP_LS'][i] : `Switch ${i+1}`), group: 'Input', isOutput: false });
+    }
+    for (let o = 0; o < 4; o++) {
+      const addr = `O:0/${o}`;
+      list.push({ addr, label: symbols?.[addr] || (activeSandbox === 'MetalShear' ? ['CONV1', 'CONV2', 'SHEAR', 'CONV3'][o] : `Lamp ${o+1}`), group: 'Output', isOutput: true });
+    }
+    for (let b = 0; b < 3; b++) {
+      const addr = `B3:0/${b}`;
+      list.push({ addr, label: symbols?.[addr] || (activeSandbox === 'MetalShear' && b === 0 ? 'RUN_RELAY' : `Relay ${b}`), group: 'Internal', isOutput: false });
+    }
+    existingTimers.forEach(t => {
+      list.push({ addr: `${t}.DN`, label: `${t} Done Bit`, group: 'Timer', isOutput: false });
+      list.push({ addr: `${t}.TT`, label: `${t} Timing Bit`, group: 'Timer', isOutput: false });
+      list.push({ addr: `${t}.EN`, label: `${t} Enable Bit`, group: 'Timer', isOutput: false });
+    });
+    list.push({ addr: 'N7:0', label: symbols?.['N7:0'] || 'Int 0', group: 'Register', isOutput: false });
+    Object.keys(symbols || {}).forEach(addr => {
+      if (!list.some(x => x.addr === addr)) {
+        list.push({ addr, label: symbols[addr], group: 'Custom', isOutput: addr.startsWith('O:') });
+      }
+    });
+    return list;
+  }, [activeSandbox, symbols, existingTimers]);
+
   return (
     <div id="tour-palette" className="instruction-palette">
       {/* Category Tabs (Matches Picture) */}
@@ -128,7 +159,7 @@ export function InstructionPalette({
             onClick={() => setActiveCategory(cat)}
             className={`transition whitespace-nowrap cursor-pointer hover:text-white ${
               activeCategory === cat
-                ? 'text-white border-b-2 border-cyan-500 pb-0.5'
+                ? 'text-white border-b-2 border-cyan-500 pb-0.5 font-bold'
                 : 'text-slate-400'
             }`}
           >
@@ -196,6 +227,51 @@ export function InstructionPalette({
                 })}
               </div>
             </div>
+          </div>
+        )}
+        {activeCategory === 'I/O & Tags' && (
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-full">
+            <span className="text-[10px] text-slate-400 font-mono shrink-0 mr-1 flex items-center gap-1">
+              <span>⠿ Drag tag to rung:</span>
+            </span>
+            {availableTags.map(tag => {
+              const theme = tag.isOutput 
+                ? 'border-amber-500/40 bg-amber-950/25 text-amber-200 hover:border-amber-400 hover:bg-amber-900/40'
+                : tag.group === 'Timer'
+                ? 'border-purple-500/40 bg-purple-950/25 text-purple-200 hover:border-purple-400 hover:bg-purple-900/40'
+                : tag.group === 'Internal'
+                ? 'border-emerald-500/40 bg-emerald-950/25 text-emerald-200 hover:border-emerald-400 hover:bg-emerald-900/40'
+                : 'border-cyan-500/40 bg-cyan-950/25 text-cyan-200 hover:border-cyan-400 hover:bg-cyan-900/40';
+
+              return (
+                <button
+                  key={tag.addr}
+                  disabled={disabled}
+                  draggable={!disabled}
+                  onDragStart={(e) => handleDragStart(e, {
+                    kind: 'io',
+                    addr: tag.addr,
+                    label: tag.label,
+                    isOutput: tag.isOutput
+                  })}
+                  onClick={() => {
+                    if (onSelectIoToken && hasSelection) {
+                      onSelectIoToken(tag.addr);
+                    } else if (onAddInstruction) {
+                      onAddInstruction(tag.isOutput ? 'OTE' : 'XIC', tag.addr);
+                    }
+                  }}
+                  className={`border rounded-lg px-2 py-1 text-left flex flex-col justify-center min-w-[76px] cursor-grab active:cursor-grabbing transition shrink-0 group ${theme}`}
+                  title={`Drag ${tag.addr} (${tag.label}) to a rung or contact, or click to apply`}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="font-mono text-[10px] font-bold tracking-tight">{tag.addr}</span>
+                    <span className="text-[8px] opacity-50">⠿</span>
+                  </div>
+                  <span className="text-[9px] truncate max-w-[95px] font-medium leading-tight opacity-85">{tag.label}</span>
+                </button>
+              );
+            })}
           </div>
         )}
         {activeCategory === 'Math' && renderIcons(mathIcons)}

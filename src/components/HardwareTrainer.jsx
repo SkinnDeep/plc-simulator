@@ -96,10 +96,30 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning, symbols }) 
         <div className="io-grid">
           {LAMPS.map(lamp => {
             const active = isBitOn(lamp.addr);
-            return <div key={lamp.addr} className={`io-cell ${active ? 'active-cell' : ''}`} role="img" aria-label={`${lamp.name} lamp ${lamp.addr}: ${active ? 'on' : 'off'}`} style={{'--signal':lamp.color}}>
-              <span className="io-address">{lamp.addr}</span>
+            const label = symbols?.[lamp.addr] || lamp.name;
+            return <div
+              key={lamp.addr}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/json', JSON.stringify({
+                  kind: 'io',
+                  addr: lamp.addr,
+                  label,
+                  isOutput: true
+                }));
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              className={`io-cell ${active ? 'active-cell' : ''} cursor-grab active:cursor-grabbing hover:border-amber-400/50 transition group`}
+              role="img"
+              aria-label={`${lamp.name} lamp ${lamp.addr}: ${active ? 'on' : 'off'}`}
+              style={{'--signal':lamp.color}}
+              title={`Drag ${lamp.addr} (${label}) to a ladder rung or coil`}
+            >
+              <span className="io-address flex items-center gap-1 group-hover:text-amber-300">
+                <span className="opacity-40 text-[9px]">⠿</span>{lamp.addr}
+              </span>
               <div className={`pilot-lamp ${active ? 'lit' : ''}`}><span /></div>
-              <span className="io-name" title={symbols?.[lamp.addr]}>{lamp.name}</span>
+              <span className="io-name" title={label}>{label}</span>
               <span className={`io-value ${active ? 'on' : ''}`}><i />{active ? 'On' : 'Off'}<b>{active ? '1' : '0'}</b></span>
             </div>;
           })}
@@ -111,8 +131,25 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning, symbols }) 
           {[0,1].map(index => {
             const addr = `I:0/${index}`;
             const active = isBitOn(addr);
+            const label = symbols?.[addr] || `Switch ${index + 1}`;
             return <div className={`io-cell ${active ? 'active-cell' : ''}`} key={addr} style={{ '--signal': active ? '#10b981' : '#64748b' }}>
-              <span className="io-address">{addr}</span>
+              <span
+                draggable
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  e.dataTransfer.setData('application/json', JSON.stringify({
+                    kind: 'io',
+                    addr,
+                    label,
+                    isOutput: false
+                  }));
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
+                className="io-address flex items-center gap-1 cursor-grab active:cursor-grabbing hover:text-cyan-300 hover:bg-cyan-950/40 px-1 py-0.5 rounded transition"
+                title={`Drag ${addr} (${label}) to rung or contact`}
+              >
+                <span className="opacity-40 text-[9px]">⠿</span>{addr}
+              </span>
               <button
                 className="switch-control"
                 aria-label={`Switch ${index + 1}`}
@@ -128,17 +165,35 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning, symbols }) 
               >
                 <span className="switch-track"><span /></span>
               </button>
-              <span className="io-name">Switch {index + 1}</span>
+              <span className="io-name">{label}</span>
               <span className={`io-value ${active ? 'on' : ''}`}><i />{active ? 'On' : 'Off'}<b>{active ? '1' : '0'}</b></span>
             </div>;
           })}
-          {[{addr:'I:0/2', label:'Start', name:'Green start pushbutton', color:'#10b981'}, {addr:'I:0/3', label:'Stop', name:'Red stop pushbutton', color:'#ef4444'}].map(pb => <div className={`io-cell ${isBitOn(pb.addr) ? 'active-cell' : ''}`} key={pb.addr} style={{'--signal':pb.color}}>
-            <span className="io-address">{pb.addr}</span>
+          {[{addr:'I:0/2', label:'Start', name:'Green start pushbutton', color:'#10b981'}, {addr:'I:0/3', label:'Stop', name:'Red stop pushbutton', color:'#ef4444'}].map(pb => {
+            const pbLabel = symbols?.[pb.addr] || pb.label;
+            return <div className={`io-cell ${isBitOn(pb.addr) ? 'active-cell' : ''}`} key={pb.addr} style={{'--signal':pb.color}}>
+            <span
+              draggable
+              onDragStart={(e) => {
+                e.stopPropagation();
+                e.dataTransfer.setData('application/json', JSON.stringify({
+                  kind: 'io',
+                  addr: pb.addr,
+                  label: pbLabel,
+                  isOutput: false
+                }));
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              className="io-address flex items-center gap-1 cursor-grab active:cursor-grabbing hover:text-cyan-300 hover:bg-cyan-950/40 px-1 py-0.5 rounded transition"
+              title={`Drag ${pb.addr} (${pbLabel}) to rung or contact`}
+            >
+              <span className="opacity-40 text-[9px]">⠿</span>{pb.addr}
+            </span>
             <button
               className={`momentary-control ${isBitOn(pb.addr) ? 'pressed' : ''}`}
               aria-label={pb.name}
               aria-pressed={isBitOn(pb.addr)}
-              title={`${pb.label} (${pb.addr}) — press and hold`}
+              title={`${pbLabel} (${pb.addr}) — press and hold`}
               onPointerDown={e => {
                 if (e.button !== undefined && e.button !== 0) return;
                 e.preventDefault();
@@ -162,11 +217,12 @@ export function HardwareTrainer({ plcData, onToggleInput, isRunning, symbols }) 
               }}
               onBlur={() => release(undefined, pb.addr)}
             >
-              <span>{pb.label}</span>
+              <span>{pbLabel}</span>
             </button>
-            <span className="io-name">{pb.label}</span>
+            <span className="io-name">{pbLabel}</span>
             <span className={`io-value ${isBitOn(pb.addr) ? 'on' : ''}`}>{isBitOn(pb.addr) ? 'Pressed' : 'Hold'}<b>{isBitOn(pb.addr) ? '1' : '0'}</b></span>
-          </div>)}
+          </div>;
+          })}
         </div>
       </section>
       <div className="hardware-data"><span><Activity size={14} />Live image</span><code>I:0 <b>{[0,1,2,3].map(i => isBitOn(`I:0/${i}`) ? 1 : 0).join('')}</b></code><code>O:0 <b>{[0,1,2,3].map(i => isBitOn(`O:0/${i}`) ? 1 : 0).join('')}</b></code></div>

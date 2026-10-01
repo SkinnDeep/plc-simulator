@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, GitFork, X, Check, AlertTriangle, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Plus, Trash2, GitFork, X, Check, AlertTriangle, ChevronDown, Search, Edit2, Sparkles, GripVertical, Tag } from 'lucide-react';
 import { InstructionPalette } from './InstructionPalette';
 import { validateLadderLogic } from '../engine/plcValidator';
 import { parseProgramFile } from '../engine/programFile';
@@ -766,6 +766,8 @@ export function LadderEditor({
         <InstructionPalette
           disabled={isRunning}
           existingTimers={existingTimers}
+          symbols={symbols}
+          activeSandbox={activeSandbox}
           onAddInstruction={(type, defaultAddr) => {
           if (selectedItemId) {
             let extra = {};
@@ -1439,79 +1441,24 @@ export function LadderEditor({
         </button>
       </div>
 
-      {/* 4. Quick Address Picker Modal / Popover */}
+      {/* 4. Customizable Tag & Address Picker Dialog */}
       {addressPickerTarget && (
-        <div
-          onClick={() => setAddressPickerTarget(null)}
-          className="fixed inset-0 z-[10000] bg-black/70 flex items-center justify-center p-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border-2 border-cyan-500/80 rounded-2xl p-5 shadow-2xl max-w-md w-full space-y-4"
-          >
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <span>Select I/O Address for Instruction</span>
-              </h4>
-              <button
-                onClick={() => setAddressPickerTarget(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="mb-2">
-              <input 
-                type="text" 
-                placeholder="Type custom address (e.g. T4:1.DN) and press Enter"
-                className="w-full bg-slate-950 border border-slate-700 text-cyan-300 text-xs font-mono font-bold px-3 py-2.5 rounded-lg focus:outline-none focus:border-cyan-400"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && e.target.value.trim()) {
-                    handleUpdateItem(addressPickerTarget.rungIdx, addressPickerTarget.itemId, { operand: e.target.value.trim().toUpperCase() });
-                    setAddressPickerTarget(null);
-                  }
-                }}
-                autoFocus
-              />
-            </div>
-
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-              {dynamicAddressOptions.map((grp) => (
-                <div key={grp.group} className="space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                    {grp.group}
-                  </span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {grp.items.map((item) => {
-                      const displayLabel = symbols?.[item.addr] || item.label;
-
-                      return (
-                        <button
-                          key={item.addr}
-                          onClick={() => {
-                            handleUpdateItem(addressPickerTarget.rungIdx, addressPickerTarget.itemId, { operand: item.addr });
-                            setAddressPickerTarget(null);
-                          }}
-                          className="flex items-center justify-between p-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-cyan-400 text-left cursor-pointer transition active:scale-95"
-                        >
-                          <div>
-                            <span className="text-xs font-mono font-bold text-cyan-300 block">
-                              {item.addr}
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              {displayLabel}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <AddressAndTagPickerModal
+          target={addressPickerTarget}
+          targetItem={
+            rungs[addressPickerTarget.rungIdx]
+              ? findItemRecursive(rungs[addressPickerTarget.rungIdx].items, addressPickerTarget.itemId)
+              : null
+          }
+          dynamicAddressOptions={dynamicAddressOptions}
+          symbols={symbols}
+          onUpdateSymbol={onUpdateSymbol}
+          onSelectAddress={(chosenAddr) => {
+            handleUpdateItem(addressPickerTarget.rungIdx, addressPickerTarget.itemId, { operand: chosenAddr });
+            setAddressPickerTarget(null);
+          }}
+          onClose={() => setAddressPickerTarget(null)}
+        />
       )}
 
 
@@ -2110,6 +2057,296 @@ function WireJunctionHandle({ rungIdx, itemIdx, isBranchMode, branchStartNode, o
       onNodeClick={onNodeClick}
       isOutputZone={isOutputZone}
     />
+  );
+}
+
+// Obvious, customizable Tag & Address Picker dialog with drag-and-drop & in-place tag editing
+function AddressAndTagPickerModal({
+  target,
+  targetItem,
+  dynamicAddressOptions,
+  symbols,
+  onUpdateSymbol,
+  onSelectAddress,
+  onClose
+}) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'INPUTS' | 'OUTPUTS' | 'RELAYS' | 'TIMERS' | 'DATA'
+  const [editingAddr, setEditingAddr] = useState(null);
+  const [editingLabel, setEditingLabel] = useState('');
+
+  // Flatten all items with group tags
+  const allItems = useMemo(() => {
+    const list = [];
+    dynamicAddressOptions.forEach(grp => {
+      const gName = grp.group.toUpperCase();
+      let tabCategory = 'OTHER';
+      if (gName.includes('INPUT')) tabCategory = 'INPUTS';
+      else if (gName.includes('OUTPUT')) tabCategory = 'OUTPUTS';
+      else if (gName.includes('INTERNAL') || gName.includes('B3')) tabCategory = 'RELAYS';
+      else if (gName.includes('TIMER') || gName.includes('T4')) tabCategory = 'TIMERS';
+      else if (gName.includes('REGISTER') || gName.includes('INTEGER') || gName.includes('N7')) tabCategory = 'DATA';
+
+      grp.items.forEach(item => {
+        const symbolLabel = symbols?.[item.addr] || item.label || '';
+        list.push({
+          ...item,
+          groupName: grp.group,
+          tabCategory,
+          displayLabel: symbolLabel
+        });
+      });
+    });
+    return list;
+  }, [dynamicAddressOptions, symbols]);
+
+  // Filter items based on activeTab and searchQuery
+  const filteredItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return allItems.filter(item => {
+      if (activeTab !== 'ALL' && item.tabCategory !== activeTab) {
+        return false;
+      }
+      if (!q) return true;
+      const matchAddr = item.addr.toLowerCase().includes(q);
+      const matchLabel = item.displayLabel.toLowerCase().includes(q);
+      const matchDesc = (item.desc || '').toLowerCase().includes(q);
+      return matchAddr || matchLabel || matchDesc;
+    });
+  }, [allItems, activeTab, searchQuery]);
+
+  const normalizedQuery = searchQuery.trim().toUpperCase();
+  const hasExactMatch = allItems.some(i => i.addr.toUpperCase() === normalizedQuery);
+  const isValidAddressFormat = /^[IOTEB3T4N7S2]:\d+(\/\d+|\.\w+)?$/i.test(normalizedQuery) || /^[A-Z0-9_]{2,16}$/i.test(normalizedQuery);
+
+  const handleStartEdit = (addr, currentLabel, e) => {
+    e.stopPropagation();
+    setEditingAddr(addr);
+    setEditingLabel(currentLabel || '');
+  };
+
+  const handleSaveEdit = (addr, e) => {
+    e.stopPropagation();
+    if (onUpdateSymbol && editingLabel.trim()) {
+      onUpdateSymbol(addr, editingLabel.trim());
+    }
+    setEditingAddr(null);
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[10000] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-900 border-2 border-cyan-500/80 rounded-2xl p-5 shadow-2xl max-w-lg w-full flex flex-col max-h-[85vh] space-y-3.5 text-slate-100"
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-slate-800 pb-2.5">
+          <div>
+            <div className="flex items-center gap-2">
+              <Tag className="w-4 h-4 text-cyan-400" />
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Select or Customize Tag Address
+              </h3>
+            </div>
+            {targetItem && (
+              <p className="text-xs text-slate-400 mt-0.5">
+                Instruction: <span className="font-mono font-bold text-cyan-300">[{targetItem.type}]</span> · Current operand: <span className="font-mono font-bold text-amber-300">{targetItem.operand || '(None)'}</span>
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Drag & Drop Pro-Tip Banner */}
+        <div className="bg-cyan-950/40 border border-cyan-500/30 rounded-xl p-2.5 flex items-center gap-2.5 text-xs text-cyan-200">
+          <GripVertical className="w-4 h-4 text-cyan-400 shrink-0" />
+          <p className="leading-snug">
+            <b className="text-cyan-300">Drag & Drop:</b> You can drag any tag chip below directly onto rungs, or drag switches/lamps directly from the Hardware Bench!
+          </p>
+        </div>
+
+        {/* Live Search & Custom Address Input */}
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search address, tag name, or type custom (e.g. I:0/0, T4:0.DN)..."
+            className="w-full bg-slate-950 border border-slate-700 text-cyan-300 placeholder-slate-500 text-xs font-mono font-bold pl-9 pr-3 py-2.5 rounded-xl focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                if (normalizedQuery) {
+                  onSelectAddress(normalizedQuery);
+                } else if (filteredItems.length > 0) {
+                  onSelectAddress(filteredItems[0].addr);
+                }
+              }
+            }}
+            autoFocus
+          />
+        </div>
+
+        {/* Category Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+          {[
+            { id: 'ALL', label: 'All Tags' },
+            { id: 'INPUTS', label: 'Inputs (I)' },
+            { id: 'OUTPUTS', label: 'Outputs (O)' },
+            { id: 'RELAYS', label: 'Relays (B3)' },
+            { id: 'TIMERS', label: 'Timers (T4)' },
+            { id: 'DATA', label: 'Data (N7)' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-2.5 py-1 rounded-lg font-mono text-[11px] font-bold whitespace-nowrap transition cursor-pointer ${
+                activeTab === tab.id
+                  ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                  : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Custom Address Creation Action Bar (if user types an address not in list) */}
+        {searchQuery.trim() && !hasExactMatch && isValidAddressFormat && (
+          <button
+            onClick={() => onSelectAddress(normalizedQuery)}
+            className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-mono text-xs font-bold py-2 px-3 rounded-xl flex items-center justify-between shadow-md transition cursor-pointer active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-yellow-300" />
+              <span>Use Custom Address: <code className="bg-black/30 px-1.5 py-0.5 rounded">{normalizedQuery}</code></span>
+            </div>
+            <span className="text-[10px] uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded">Enter ↵</span>
+          </button>
+        )}
+
+        {/* Scrollable Tag Grid */}
+        <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[48vh]">
+          {filteredItems.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-xs font-mono">
+              <p>No matching tags found for "{searchQuery}".</p>
+              <p className="mt-1 text-slate-500">Press Enter to use "{normalizedQuery}" as a custom address.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {filteredItems.map(item => {
+                const isCurrent = targetItem?.operand === item.addr;
+                const isEditing = editingAddr === item.addr;
+
+                const badgeBg = item.tabCategory === 'OUTPUTS'
+                  ? 'border-amber-500/40 bg-amber-950/20 text-amber-300'
+                  : item.tabCategory === 'TIMERS'
+                  ? 'border-purple-500/40 bg-purple-950/20 text-purple-300'
+                  : item.tabCategory === 'RELAYS'
+                  ? 'border-emerald-500/40 bg-emerald-950/20 text-emerald-300'
+                  : 'border-cyan-500/40 bg-cyan-950/20 text-cyan-300';
+
+                return (
+                  <div
+                    key={item.addr}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/json', JSON.stringify({
+                        kind: 'io',
+                        addr: item.addr,
+                        label: item.displayLabel,
+                        isOutput: item.tabCategory === 'OUTPUTS'
+                      }));
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
+                    onClick={() => onSelectAddress(item.addr)}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer group active:scale-[0.98] ${
+                      isCurrent
+                        ? 'border-cyan-400 bg-cyan-950/50 shadow-[0_0_10px_rgba(6,182,212,0.25)] ring-1 ring-cyan-400'
+                        : 'border-slate-800 bg-slate-950 hover:bg-slate-800/80 hover:border-cyan-500/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-slate-600 group-hover:text-slate-400 cursor-grab active:cursor-grabbing text-xs">
+                        ⠿
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded border ${badgeBg}`}>
+                            {item.addr}
+                          </span>
+                          {isCurrent && (
+                            <span className="text-[9px] font-mono text-cyan-400 bg-cyan-950/70 border border-cyan-500/40 px-1 rounded">
+                              Current
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Tag Label with in-place rename */}
+                        {isEditing ? (
+                          <div className="flex items-center gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={editingLabel}
+                              onChange={(e) => setEditingLabel(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveEdit(item.addr, e);
+                                if (e.key === 'Escape') setEditingAddr(null);
+                              }}
+                              className="text-xs bg-slate-900 border border-cyan-400 text-white px-1.5 py-0.5 rounded font-mono w-28 focus:outline-none"
+                              autoFocus
+                            />
+                            <button
+                              onClick={(e) => handleSaveEdit(item.addr, e)}
+                              className="p-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer"
+                              title="Save Symbol"
+                            >
+                              <Check className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[11px] text-slate-300 font-medium truncate block max-w-[120px]">
+                              {item.displayLabel}
+                            </span>
+                            <button
+                              onClick={(e) => handleStartEdit(item.addr, item.displayLabel, e)}
+                              className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-slate-700 text-slate-400 hover:text-cyan-300 transition cursor-pointer"
+                              title="Rename Symbol / Custom Tag"
+                            >
+                              <Edit2 className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectAddress(item.addr);
+                      }}
+                      className="ml-2 px-2 py-1 rounded bg-slate-800 hover:bg-cyan-600 text-slate-300 hover:text-white text-[10px] font-mono font-bold transition opacity-80 group-hover:opacity-100 cursor-pointer"
+                    >
+                      Assign
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

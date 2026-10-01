@@ -408,6 +408,7 @@ export function App() {
                     plcData={plcData}
                     onToggleInput={handleToggleInput}
                     isRunning={isRunning}
+                    symbols={activeSymbols}
                   />
                 )}
               </div>
