@@ -83,6 +83,7 @@ export function LadderEditor({
   const [clipboard, setClipboard] = useState(null);
   const [dragOverTarget, setDragOverTarget] = useState(null);
   const [addressPickerTarget, setAddressPickerTarget] = useState(null); // { rungIdx, itemId }
+  const [tagRenameTarget, setTagRenameTarget] = useState(null); // { rungIdx, itemId, operand, rect }
 
   const [isBranchMode, setIsBranchMode] = useState(false);
   const [branchStartNode, setBranchStartNode] = useState(null);
@@ -1088,6 +1089,7 @@ export function LadderEditor({
                                             plcData={plcData}
                                             symbols={symbols}
                                             onUpdateSymbol={onUpdateSymbol}
+                                            onStartRename={(rect) => setTagRenameTarget({ rungIdx: rIdx, itemId: subItem.id, operand: subItem.operand || subItem.params?.sourceA || subItem.params?.test || subItem.params?.dest || 'N7:0', rect })}
                                             onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
                                             onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id, rect })}
                                             onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
@@ -1098,6 +1100,7 @@ export function LadderEditor({
                                           <RungElementCard
                                             symbols={symbols}
                                             onUpdateSymbol={onUpdateSymbol}
+                                            onStartRename={(rect) => setTagRenameTarget({ rungIdx: rIdx, itemId: subItem.id, operand: subItem.operand, rect })}
                                             item={subItem}
                                             isSelected={selectedItemId === subItem.id}
                                             isActive={isElementActive(rung.id, subItem.id)}
@@ -1173,6 +1176,7 @@ export function LadderEditor({
                                 plcData={plcData}
                                 symbols={symbols}
                                 onUpdateSymbol={onUpdateSymbol}
+                                onStartRename={(rect) => setTagRenameTarget({ rungIdx: rIdx, itemId: item.id, operand: item.operand || item.params?.sourceA || item.params?.test || item.params?.dest || 'N7:0', rect })}
                                 onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
                                 onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id, rect })}
                                 onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
@@ -1183,6 +1187,7 @@ export function LadderEditor({
                               <RungElementCard
                                 symbols={symbols}
                                 onUpdateSymbol={onUpdateSymbol}
+                                onStartRename={(rect) => setTagRenameTarget({ rungIdx: rIdx, itemId: item.id, operand: item.operand, rect })}
                                 item={item}
                                 isSelected={selectedItemId === item.id}
                                 isActive={isElementActive(rung.id, item.id)}
@@ -1283,6 +1288,7 @@ export function LadderEditor({
                                               plcData={plcData}
                                               symbols={symbols}
                                               onUpdateSymbol={onUpdateSymbol}
+                                              onStartRename={(rect) => setTagRenameTarget({ rungIdx: rIdx, itemId: subItem.id, operand: subItem.operand || 'T4:0', rect })}
                                               onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
                                               onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id, rect })}
                                               onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
@@ -1297,6 +1303,7 @@ export function LadderEditor({
                                               plcData={plcData}
                                               symbols={symbols}
                                               onUpdateSymbol={onUpdateSymbol}
+                                              onStartRename={(rect) => setTagRenameTarget({ rungIdx: rIdx, itemId: subItem.id, operand: subItem.operand || subItem.params?.sourceA || subItem.params?.test || subItem.params?.dest || 'N7:0', rect })}
                                               onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(subItem.id); }}
                                               onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: subItem.id, rect })}
                                               onUpdate={(updates) => handleUpdateItem(rIdx, subItem.id, updates)}
@@ -1307,6 +1314,7 @@ export function LadderEditor({
                                             <RungElementCard
                                               symbols={symbols}
                                               onUpdateSymbol={onUpdateSymbol}
+                                              onStartRename={(rect) => setTagRenameTarget({ rungIdx: rIdx, itemId: subItem.id, operand: subItem.operand, rect })}
                                               item={subItem}
                                               isSelected={selectedItemId === subItem.id}
                                               isActive={isElementActive(rung.id, subItem.id)}
@@ -1392,6 +1400,7 @@ export function LadderEditor({
                                   plcData={plcData}
                                   symbols={symbols}
                                   onUpdateSymbol={onUpdateSymbol}
+                                  onStartRename={(rect) => setTagRenameTarget({ rungIdx: rIdx, itemId: item.id, operand: item.operand || 'T4:0', rect })}
                                   onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
                                   onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id, rect })}
                                   onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
@@ -1407,6 +1416,7 @@ export function LadderEditor({
                                   plcData={plcData}
                                   symbols={symbols}
                                   onUpdateSymbol={onUpdateSymbol}
+                                  onStartRename={(rect) => setTagRenameTarget({ rungIdx: rIdx, itemId: item.id, operand: item.operand || item.params?.sourceA || item.params?.test || item.params?.dest || 'N7:0', rect })}
                                   onSelect={() => { setSelectedRungIdx(rIdx); setSelectedItemId(item.id); }}
                                   onOpenPicker={(rect) => setAddressPickerTarget({ rungIdx: rIdx, itemId: item.id, rect })}
                                   onUpdate={(updates) => handleUpdateItem(rIdx, item.id, updates)}
@@ -1418,6 +1428,7 @@ export function LadderEditor({
                                 <RungElementCard
                                   symbols={symbols}
                                   onUpdateSymbol={onUpdateSymbol}
+                                  onStartRename={(rect) => setTagRenameTarget({ rungIdx: rIdx, itemId: item.id, operand: item.operand, rect })}
                                   item={item}
                                   isSelected={selectedItemId === item.id}
                                   isActive={isElementActive(rung.id, item.id)}
@@ -1535,6 +1546,21 @@ export function LadderEditor({
           onAddNewTimer={handleAddNewTimer}
         />
       )}
+
+      {/* Floating Viewport-Anchored Tag / Variable Rename Popover (Never clipped) */}
+      {tagRenameTarget && (
+        <FloatingTagRenamePopover
+          target={tagRenameTarget}
+          symbols={symbols}
+          onUpdateSymbol={onUpdateSymbol}
+          onOpenPicker={(pickerRect) => {
+            const tgt = tagRenameTarget;
+            setTagRenameTarget(null);
+            setAddressPickerTarget({ rungIdx: tgt.rungIdx, itemId: tgt.itemId, rect: pickerRect || tgt.rect });
+          }}
+          onClose={() => setTagRenameTarget(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1591,7 +1617,8 @@ function ItemRenameButton({ isVisible, onRename, title = "Edit tag / symbol name
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onRename();
+          const cardEl = e.currentTarget.closest('.instruction-card, .ladder-instruction, [draggable]') || e.currentTarget;
+          onRename?.(cardEl.getBoundingClientRect());
         }}
         className="p-1 hover:text-cyan-300 text-slate-400 hover:bg-cyan-950/40 rounded transition cursor-pointer flex items-center justify-center"
         title={title}
@@ -1604,10 +1631,8 @@ function ItemRenameButton({ isVisible, onRename, title = "Edit tag / symbol name
 }
 
 // Minimalist ISA-101 Industrial Instruction Card
-function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onUpdate, onDelete, symbols, onUpdateSymbol, onDropItem, isOutputZone = false }) {
+function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, onUpdate, onDelete, symbols, onUpdateSymbol, onStartRename, onDropItem, isOutputZone = false }) {
   const { hoverTrash, handleMouseEnter, handleMouseLeave } = useHoverTrash();
-  const [isEditingTag, setIsEditingTag] = useState(false);
-  const [editingTagValue, setEditingTagValue] = useState('');
   const isOutput = ['OTE', 'OTL', 'OTU', 'TON', 'TOF', 'RTO', 'RES', 'MOV', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type);
   const color = isActive 
     ? 'text-emerald-400 font-black drop-shadow-[0_0_8px_#10b981]' 
@@ -1806,82 +1831,14 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
       <ItemDeleteButton isVisible={isSelected || hoverTrash} onDelete={onDelete} />
       <ItemRenameButton
         isVisible={isSelected || hoverTrash}
-        onRename={() => {
-          setIsEditingTag(true);
-          setEditingTagValue(symbols?.[item.operand] || '');
-        }}
+        onRename={(rect) => onStartRename?.(rect)}
       />
-
-      {/* Inline Tag & Variable Name Rename Popover */}
-      {isEditingTag && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="absolute -top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border-2 border-cyan-500 rounded-lg p-1.5 shadow-2xl flex items-center gap-1.5 min-w-[210px] animate-in fade-in duration-100 text-slate-100"
-        >
-          <div className="flex flex-col flex-1">
-            <div className="flex items-center justify-between text-[9px] text-cyan-300 font-mono font-bold mb-0.5">
-              <span>TAG FOR {item.operand || 'ITEM'}</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  setIsEditingTag(false);
-                  const r = e.currentTarget.getBoundingClientRect();
-                  onOpenPicker?.({ top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom });
-                }}
-                className="text-slate-400 hover:text-cyan-200 underline text-[8px] cursor-pointer"
-              >
-                Change Addr
-              </button>
-            </div>
-            <input
-              autoFocus
-              type="text"
-              value={editingTagValue}
-              onChange={(e) => setEditingTagValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (item.operand && onUpdateSymbol) {
-                    onUpdateSymbol(item.operand, editingTagValue.trim());
-                  }
-                  setIsEditingTag(false);
-                } else if (e.key === 'Escape') {
-                  setIsEditingTag(false);
-                }
-              }}
-              placeholder="e.g. Arm Switch"
-              className="bg-slate-950 border border-slate-700 text-white text-xs px-1.5 py-0.5 rounded outline-none focus:border-cyan-400 font-sans"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (item.operand && onUpdateSymbol) {
-                onUpdateSymbol(item.operand, editingTagValue.trim());
-              }
-              setIsEditingTag(false);
-            }}
-            className="self-end px-2 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold cursor-pointer transition"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsEditingTag(false)}
-            className="self-end px-1 py-1 rounded text-slate-400 hover:text-white text-[10px] cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
-      )}
     </div>
   );
 }
 
-function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete, symbols, onUpdateSymbol, onDropItem }) {
+function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete, symbols, onUpdateSymbol, onStartRename, onDropItem }) {
   const { hoverTrash, handleMouseEnter, handleMouseLeave } = useHoverTrash();
-  const [isEditingTag, setIsEditingTag] = useState(false);
-  const [editingTagValue, setEditingTagValue] = useState('');
   const color = isActive ? 'text-emerald-400' : 'text-slate-300';
   const borderColor = isActive ? 'border-emerald-500/60' : 'border-[#3c414a]';
   const bgHeader = isActive ? 'bg-emerald-950/30' : 'bg-[#1a1c20]';
@@ -2055,84 +2012,14 @@ function TimerInstructionBlock({ item, isSelected, isActive, plcData, onSelect, 
       <ItemDeleteButton isVisible={isSelected || hoverTrash} onDelete={onDelete} />
       <ItemRenameButton
         isVisible={isSelected || hoverTrash}
-        onRename={() => {
-          setIsEditingTag(true);
-          const tAddr = item.operand || 'T4:0';
-          setEditingTagValue(symbols?.[tAddr] || '');
-        }}
+        onRename={(rect) => onStartRename?.(rect)}
       />
-
-      {isEditingTag && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="absolute -top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border-2 border-purple-500 rounded-lg p-1.5 shadow-2xl flex items-center gap-1.5 min-w-[210px] animate-in fade-in duration-100 text-slate-100"
-        >
-          <div className="flex flex-col flex-1">
-            <div className="flex items-center justify-between text-[9px] text-purple-300 font-mono font-bold mb-0.5">
-              <span>TAG FOR {item.operand || 'T4:0'}</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  setIsEditingTag(false);
-                  const r = e.currentTarget.getBoundingClientRect();
-                  onOpenPicker?.({ top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom });
-                }}
-                className="text-slate-400 hover:text-purple-200 underline text-[8px] cursor-pointer"
-              >
-                Change Addr
-              </button>
-            </div>
-            <input
-              autoFocus
-              type="text"
-              value={editingTagValue}
-              onChange={(e) => setEditingTagValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const tAddr = item.operand || 'T4:0';
-                  if (onUpdateSymbol) {
-                    onUpdateSymbol(tAddr, editingTagValue.trim());
-                  }
-                  setIsEditingTag(false);
-                } else if (e.key === 'Escape') {
-                  setIsEditingTag(false);
-                }
-              }}
-              placeholder="e.g. Shear Delay Timer"
-              className="bg-slate-950 border border-slate-700 text-white text-xs px-1.5 py-0.5 rounded outline-none focus:border-purple-400 font-sans"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              const tAddr = item.operand || 'T4:0';
-              if (onUpdateSymbol) {
-                onUpdateSymbol(tAddr, editingTagValue.trim());
-              }
-              setIsEditingTag(false);
-            }}
-            className="self-end px-2 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold cursor-pointer transition"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsEditingTag(false)}
-            className="self-end px-1 py-1 rounded text-slate-400 hover:text-white text-[10px] cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
-      )}
     </div>
   );
 }
 
-function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete, symbols, onUpdateSymbol, onDropItem }) {
+function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, onOpenPicker, onUpdate, onDelete, symbols, onUpdateSymbol, onStartRename, onDropItem }) {
   const { hoverTrash, handleMouseEnter, handleMouseLeave } = useHoverTrash();
-  const [isEditingTag, setIsEditingTag] = useState(false);
-  const [editingTagValue, setEditingTagValue] = useState('');
   const isCompare = ['EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(item.type);
   const color = isActive ? 'text-emerald-400' : (isCompare ? 'text-orange-300' : 'text-slate-300');
   const borderColor = isActive ? 'border-emerald-500/60' : (isCompare ? 'border-orange-500/40' : 'border-[#3c414a]');
@@ -2270,76 +2157,8 @@ function MathInstructionBlock({ item, isSelected, isActive, plcData, onSelect, o
       <ItemDeleteButton isVisible={isSelected || hoverTrash} onDelete={onDelete} />
       <ItemRenameButton
         isVisible={isSelected || hoverTrash}
-        onRename={() => {
-          setIsEditingTag(true);
-          const mAddr = item.operand || item.params?.sourceA || item.params?.test || item.params?.dest || 'N7:0';
-          setEditingTagValue(symbols?.[mAddr] || '');
-        }}
+        onRename={(rect) => onStartRename?.(rect)}
       />
-
-      {isEditingTag && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="absolute -top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border-2 border-teal-500 rounded-lg p-1.5 shadow-2xl flex items-center gap-1.5 min-w-[210px] animate-in fade-in duration-100 text-slate-100"
-        >
-          <div className="flex flex-col flex-1">
-            <div className="flex items-center justify-between text-[9px] text-teal-300 font-mono font-bold mb-0.5">
-              <span>TAG FOR {item.operand || item.params?.sourceA || item.params?.test || 'N7:0'}</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  setIsEditingTag(false);
-                  const r = e.currentTarget.getBoundingClientRect();
-                  onOpenPicker?.({ top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom });
-                }}
-                className="text-slate-400 hover:text-teal-200 underline text-[8px] cursor-pointer"
-              >
-                Change Addr
-              </button>
-            </div>
-            <input
-              autoFocus
-              type="text"
-              value={editingTagValue}
-              onChange={(e) => setEditingTagValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const mAddr = item.operand || item.params?.sourceA || item.params?.test || item.params?.dest || 'N7:0';
-                  if (onUpdateSymbol) {
-                    onUpdateSymbol(mAddr, editingTagValue.trim());
-                  }
-                  setIsEditingTag(false);
-                } else if (e.key === 'Escape') {
-                  setIsEditingTag(false);
-                }
-              }}
-              placeholder="e.g. Batch Counter"
-              className="bg-slate-950 border border-slate-700 text-white text-xs px-1.5 py-0.5 rounded outline-none focus:border-teal-400 font-sans"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              const mAddr = item.operand || item.params?.sourceA || item.params?.test || item.params?.dest || 'N7:0';
-              if (onUpdateSymbol) {
-                onUpdateSymbol(mAddr, editingTagValue.trim());
-              }
-              setIsEditingTag(false);
-            }}
-            className="self-end px-2 py-1 rounded bg-teal-600 hover:bg-teal-500 text-white text-[10px] font-bold cursor-pointer transition"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsEditingTag(false)}
-            className="self-end px-1 py-1 rounded text-slate-400 hover:text-white text-[10px] cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -2740,6 +2559,121 @@ function IOSReactionAddressPicker({
             </div>
           </div>
         )}
+      </div>
+    </>
+  );
+}
+
+// Fixed-position Floating Tag & Variable Name Rename Popover (immune to overflow clipping)
+function FloatingTagRenamePopover({ target, symbols, onUpdateSymbol, onOpenPicker, onClose }) {
+  const [tagValue, setTagValue] = useState(() => (target.operand && symbols ? (symbols[target.operand] || '') : ''));
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, []);
+
+  const operand = target.operand || 'ITEM';
+  const isTimer = operand.startsWith('T4:');
+  const isMath = operand.startsWith('N7:');
+  const isOutput = operand.startsWith('O:');
+
+  const themeBorder = isTimer ? 'border-purple-500' : isMath ? 'border-teal-500' : isOutput ? 'border-amber-500' : 'border-cyan-500';
+  const themeHeader = isTimer ? 'text-purple-300' : isMath ? 'text-teal-300' : isOutput ? 'text-amber-300' : 'text-cyan-300';
+  const themeBtn = isTimer ? 'bg-purple-600 hover:bg-purple-500' : isMath ? 'bg-teal-600 hover:bg-teal-500' : isOutput ? 'bg-amber-600 hover:bg-amber-500' : 'bg-cyan-600 hover:bg-cyan-500';
+  const themeFocus = isTimer ? 'focus:border-purple-400' : isMath ? 'focus:border-teal-400' : isOutput ? 'focus:border-amber-400' : 'focus:border-cyan-400';
+
+  const rect = target.rect;
+  const winW = typeof window !== 'undefined' ? window.innerWidth : 1000;
+  const popoverWidth = 270;
+  const centerX = rect ? (rect.left + rect.width / 2) : (winW / 2);
+  const left = Math.max(popoverWidth / 2 + 16, Math.min(winW - popoverWidth / 2 - 16, centerX));
+  // If target element is near the top of the viewport (top < 110px), flip the popover below it
+  const placeBelow = rect ? (rect.top < 110) : false;
+  const top = rect ? (placeBelow ? rect.bottom + 8 : rect.top - 8) : 120;
+
+  const handleSave = () => {
+    if (target.operand && onUpdateSymbol) {
+      onUpdateSymbol(target.operand, tagValue.trim());
+    }
+    onClose();
+  };
+
+  return (
+    <>
+      {/* Click outside dismiss overlay */}
+      <div 
+        className="fixed inset-0 z-[9990] bg-transparent"
+        onClick={onClose}
+      />
+
+      <div
+        style={{
+          position: 'fixed',
+          left: `${left}px`,
+          top: `${top}px`,
+          transform: placeBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
+          zIndex: 9995
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className={`bg-slate-900 border-2 ${themeBorder} rounded-lg p-2 shadow-2xl flex items-center gap-2 min-w-[260px] max-w-[320px] animate-in fade-in zoom-in-95 duration-150 text-slate-100 relative`}
+      >
+        {/* Pointer indicator */}
+        <div
+          className={`absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-900 ${themeBorder} rotate-45 ${
+            placeBelow ? '-top-1.5 border-l-2 border-t-2' : '-bottom-1.5 border-r-2 border-b-2'
+          }`}
+        />
+
+        <div className="flex flex-col flex-1 relative z-10">
+          <div className="flex items-center justify-between text-[10px] font-mono font-bold mb-1">
+            <span className={themeHeader}>TAG FOR {operand}</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                onOpenPicker?.(r);
+              }}
+              className="text-slate-400 hover:text-white underline text-[9px] cursor-pointer"
+            >
+              Change Addr
+            </button>
+          </div>
+          <input
+            ref={inputRef}
+            type="text"
+            value={tagValue}
+            onChange={(e) => setTagValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSave();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                onClose();
+              }
+            }}
+            placeholder="e.g. Arm Switch"
+            className={`bg-slate-950 border border-slate-700 text-white text-xs px-2 py-1 rounded outline-none ${themeFocus} font-sans`}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleSave}
+          className={`self-end px-2.5 py-1 rounded ${themeBtn} text-white text-[11px] font-bold cursor-pointer transition relative z-10`}
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="self-end px-1.5 py-1 rounded text-slate-400 hover:text-white text-xs cursor-pointer relative z-10"
+        >
+          ✕
+        </button>
       </div>
     </>
   );
