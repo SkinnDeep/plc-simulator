@@ -222,9 +222,10 @@ export const SAMPLE_PROGRAMS = [
       },
       {
         id: 'ms_r2',
-        comment: 'Rung 2: Conveyor 2 (O:0/1) runs in tandem with Conveyor 1 for sheet transfer',
+        comment: 'Rung 2: Conveyor 2 (O:0/1) runs when system active and blade UP (I:0/4) to feed strip and clear cut parts',
         items: [
-          { id: 'ms_r2_c1', type: 'XIC', operand: 'O:0/0', desc: 'CONV1' },
+          { id: 'ms_r2_run', type: 'XIC', operand: 'B3:0/0', desc: 'RUN_RELAY' },
+          { id: 'ms_r2_up', type: 'XIC', operand: 'I:0/4', desc: 'UP_LS' },
           { id: 'ms_r2_c2', type: 'OTE', operand: 'O:0/1', desc: 'CONV2' }
         ]
       },
