@@ -1670,9 +1670,9 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         )}
       </button>
 
-      {/* Symbol with click-to-cycle */}
+      {/* Symbol with double-click-to-cycle (prevents accidental toggling on single-click/drag) */}
       <div 
-        onClick={(e) => {
+        onDoubleClick={(e) => {
           e.stopPropagation();
           if (onUpdate) {
             if (item.type === 'OTE') onUpdate({ type: 'OTL', desc: 'Latch Output' });
@@ -1683,7 +1683,7 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
           }
         }}
         className={`text-base font-mono tracking-widest leading-none ${color} ${isSelected ? 'px-1 rounded bg-black/40' : ''} hover:scale-105 transition-transform`}
-        title={['OTE','OTL','OTU'].includes(item.type) ? "Click to cycle OTE -> OTL -> OTU" : ['XIC','XIO'].includes(item.type) ? "Click to toggle XIC <-> XIO" : ""}
+        title={['OTE','OTL','OTU'].includes(item.type) ? "Double-click to cycle OTE -> OTL -> OTU" : ['XIC','XIO'].includes(item.type) ? "Double-click to toggle XIC <-> XIO" : ""}
       >
         {item.type === 'XIC' && '-] [-'}
         {item.type === 'XIO' && '-[/]-'}
@@ -1694,6 +1694,35 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
         {item.type === 'RES' && '-(RES)-'}
         {['ONS', 'OSR', 'OSF', 'MOV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM', 'ADD', 'SUB', 'MUL', 'DIV'].includes(item.type) && `[${item.type}]`}
       </div>
+
+      {/* Deliberate Type Selector for Contacts (shown when selected) */}
+      {['XIC', 'XIO'].includes(item.type) && !isOutputZone && isSelected && (
+        <div className="flex items-center bg-black/60 rounded border border-cyan-500/40 overflow-hidden text-[9px] font-mono mt-1 shadow-sm animate-in fade-in zoom-in-95 duration-100">
+          {[
+            { t: 'XIC', label: '-] [-', title: 'Normally Open (XIC)' },
+            { t: 'XIO', label: '-[/]-', title: 'Normally Closed (XIO)' }
+          ].map(({ t, label, title }) => (
+            <button
+              key={t}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onUpdate && item.type !== t) {
+                  onUpdate({ type: t, desc: t === 'XIO' ? 'Normally Closed' : 'Normally Open Switch' });
+                }
+              }}
+              className={`px-1.5 py-0.5 transition cursor-pointer ${
+                item.type === t
+                  ? 'bg-cyan-500/40 text-cyan-200 font-bold'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+              title={title}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Quick Type Selector for Output Coils */}
       {['OTE', 'OTL', 'OTU'].includes(item.type) && (
