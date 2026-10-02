@@ -4,10 +4,10 @@ import { Scissors, Activity, SlidersHorizontal, ArrowRight, Gauge, RotateCcw } f
 export function MetalShearSandbox({ plcData, onToggleInput, isRunning, theme = 'dark', symbols = {} }) {
   const isBitOn = (addr) => !!plcData?.bits?.[addr];
 
-  const conv1On = isBitOn('O:0/0');
-  const conv2On = isBitOn('O:0/1');
-  const bladeDown = isBitOn('O:0/2');
-  const conv3On = isBitOn('O:0/3');
+  const conv1On = isRunning && isBitOn('O:0/0');
+  const conv2On = isRunning && isBitOn('O:0/1');
+  const bladeDown = isRunning && isBitOn('O:0/2');
+  const conv3On = isRunning && isBitOn('O:0/3');
 
   const containerRef = useRef(null);
 
@@ -56,24 +56,90 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning, theme = '
     let animFrame;
     const loop = () => {
       animFrame = requestAnimationFrame(loop);
-      if (!isRunning) return; // Freeze mechanics if PLC is stopped
 
       const state = stateRef.current;
       let { stripX, bladeY, cutSheets, sensors } = state;
 
-      // 1. Move Blade
-      if (bladeDown) {
-        bladeY = Math.min(100, bladeY + BLADE_SPEED);
-      } else {
-        bladeY = Math.max(0, bladeY - BLADE_SPEED);
+      // Only execute motor movements, blade stroking, and cutting when the PLC is RUNNING
+      if (isRunning) {
+        // 1. Move Blade
+        if (bladeDown) {
+          bladeY = Math.min(100, bladeY + BLADE_SPEED);
+        } else {
+          bladeY = Math.max(0, bladeY - BLADE_SPEED);
+        }
+
+        // Reset cut trigger flag when blade retracts toward top
+        if (bladeY <= 25) {
+          state.hasCutThisStroke = false;
+        }
+
+        // 2. Move Strip (Continuous coil feed from decoiler/Conv 1)
+        // Advances if Conv 1 is running (infeed drive pushes strip forward across shear bed),
+        // OR if Conv 2 is running and strip has already reached Conv 2.
+        // Metal passage is physically blocked only if the shear blade is lowered (bladeY > 25).
+        const bladeBlocksStrip = bladeY > 25;
+        if (!bladeBlocksStrip) {
+          if (conv1On || (stripX >= SHEAR_X && conv2On)) {
+            stripX += SPEED;
+          }
+        }
+
+        // 3. Shearing / Cut Logic
+        // Cut executes when the blade reaches the metal during a downward stroke
+        const atCuttingPosition = bladeY >= 92;
+        if (atCuttingPosition && !state.hasCutThisStroke) {
+          state.hasCutThisStroke = true;
+          if (stripX > SHEAR_X) {
+            cutSheets.push({
+              id: state.nextSheetId++,
+              headX: stripX,
+              tailX: SHEAR_X + 2.5 // Visible 2.5px severance kerf between strip and cut piece
+            });
+            stripX = SHEAR_X;
+            state.cutCount = (state.cutCount || 0) + 1;
+            state.cutFlash = 15; // 15 frames of cut spark flash
+          }
+        }
+
+        // Decrement cut flash
+        if (state.cutFlash > 0) {
+          state.cutFlash--;
+        }
+
+        // 4. Move Cut Sheets
+        // If advancing continuous strip catches up with a cut sheet on Conv 2, it pushes that piece forward
+        for (let s of cutSheets) {
+          if (stripX >= s.tailX) {
+            const pushDelta = (stripX - s.tailX) + 2;
+            s.tailX += pushDelta;
+            s.headX += pushDelta;
+          }
+        }
+
+        // Advance cut sheets via conveyor motors
+        for (let s of cutSheets) {
+          const onConv2 = s.tailX < END_CONV2_X;
+          const onConv3 = s.headX >= END_CONV2_X;
+          if ((onConv2 && conv2On) || (onConv3 && conv3On)) {
+            s.headX += SPEED;
+            s.tailX += SPEED;
+          }
+        }
+
+        // Collect sheets that reach the end into the finished parts bin
+        const remainingSheets = [];
+        for (let s of cutSheets) {
+          if (s.tailX >= DROP_X) {
+            state.partsDropped = (state.partsDropped || 0) + 1;
+          } else {
+            remainingSheets.push(s);
+          }
+        }
+        cutSheets = remainingSheets;
       }
 
-      // Reset cut trigger flag when blade retracts toward top
-      if (bladeY <= 25) {
-        state.hasCutThisStroke = false;
-      }
-
-      // 2. Limit Switches:
+      // 5. Limit Switches & Sensors:
       // UP_LS: True when blade is fully retracted at top dead center
       const upOn = (bladeY <= 3);
 
@@ -81,71 +147,7 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning, theme = '
       // At bladeY >= 92, the blade contacts the metal sheet at 135px and cuts through to 143px
       const downOn = (bladeY >= 92);
 
-      // 3. Move Strip (Continuous coil feed from decoiler/Conv 1)
-      // Advances if Conv 1 is running (infeed drive pushes strip forward across shear bed),
-      // OR if Conv 2 is running and strip has already reached Conv 2.
-      // Metal passage is physically blocked only if the shear blade is lowered (bladeY > 25).
-      const bladeBlocksStrip = bladeY > 25;
-      if (!bladeBlocksStrip) {
-        if (conv1On || (stripX >= SHEAR_X && conv2On)) {
-          stripX += SPEED;
-        }
-      }
-
-      // 4. Shearing / Cut Logic
-      // Cut executes when the blade reaches the metal (downOn) during a downward stroke
-      if (downOn && !state.hasCutThisStroke) {
-        state.hasCutThisStroke = true;
-        if (stripX > SHEAR_X) {
-          cutSheets.push({
-            id: state.nextSheetId++,
-            headX: stripX,
-            tailX: SHEAR_X + 2.5 // Visible 2.5px severance kerf between strip and cut piece
-          });
-          stripX = SHEAR_X;
-          state.cutCount = (state.cutCount || 0) + 1;
-          state.cutFlash = 15; // 15 frames of cut spark flash
-        }
-      }
-
-      // Decrement cut flash
-      if (state.cutFlash > 0) {
-        state.cutFlash--;
-      }
-
-      // 5. Move Cut Sheets
-      // If advancing continuous strip catches up with a cut sheet on Conv 2, it pushes that piece forward
-      for (let s of cutSheets) {
-        if (stripX >= s.tailX) {
-          const pushDelta = (stripX - s.tailX) + 2;
-          s.tailX += pushDelta;
-          s.headX += pushDelta;
-        }
-      }
-
-      // Advance cut sheets via conveyor motors
-      for (let s of cutSheets) {
-        const onConv2 = s.tailX < END_CONV2_X;
-        const onConv3 = s.headX >= END_CONV2_X;
-        if ((onConv2 && conv2On) || (onConv3 && conv3On)) {
-          s.headX += SPEED;
-          s.tailX += SPEED;
-        }
-      }
-
-      // Collect sheets that reach the end into the finished parts bin
-      const remainingSheets = [];
-      for (let s of cutSheets) {
-        if (s.tailX >= DROP_X) {
-          state.partsDropped = (state.partsDropped || 0) + 1;
-        } else {
-          remainingSheets.push(s);
-        }
-      }
-      cutSheets = remainingSheets;
-
-      // 6. Proximity Sensor (PROX):
-      // Detects continuous strip leading edge OR any cut sheet passing beneath its beam
+      // PROX sensor: detects continuous strip leading edge OR any cut sheet passing beneath its beam
       const proxOn = (stripX >= PROX_X) || cutSheets.some(s => s.tailX <= PROX_X && s.headX >= PROX_X);
 
       // Check differences against current PLC bit values and send to PLC engine
