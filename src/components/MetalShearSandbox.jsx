@@ -740,12 +740,16 @@ export function MetalShearSandbox({ plcData, onToggleInput, isRunning, theme = '
             >
               <span>STOP</span>
             </button>
-            <span className="io-name">{symbols?.['I:0/1'] || 'Stop (N.C.)'}</span>
+            <span className="io-name">{symbols?.['I:0/1'] || 'STOP_PB'} (N.C.)</span>
             <span className={`io-value ${isStopPressed ? 'on' : ''}`}>
               <i />{isStopPressed ? 'Pressed' : 'Normal'}<b>{isBitOn('I:0/1') ? '1' : '0'}</b>
             </span>
           </div>
         </div>
+        <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+          Stop is normally closed: released = 1, pressed = 0. Use XIC as a run permissive;
+          use XIO to trigger an OTU stop rung.
+        </p>
       </section>
 
       {/* 4. Live Image Table Snapshot */}

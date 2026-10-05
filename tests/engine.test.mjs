@@ -8,6 +8,57 @@ import { validateLadderLogic } from '../src/engine/plcValidator.js';
 const engine = () => new PLCEngine(createInitialDataModel());
 const rung = (...items) => ({id: 'r', items});
 const ins = (type, operand, params) => ({id: type + operand, type, operand, params});
+
+test('normally closed shear stop unlatches only when pressed', () => {
+  const e = engine();
+  const program = [
+    { id: 'start', items: [ins('XIC', 'I:0/0'), ins('OTL', 'B3:0/0')] },
+    { id: 'stop', items: [ins('XIO', 'I:0/1'), ins('OTU', 'B3:0/0')] },
+  ];
+  e.setBit('I:0/1', true); // Released N.C. button supplies input power.
+  e.executeScanCycle(program);
+  assert.equal(e.getBit('B3:0/0'), false, 'no automatic start');
+  e.setBit('I:0/0', true);
+  e.executeScanCycle(program);
+  assert.equal(e.getBit('B3:0/0'), true);
+  e.setBit('I:0/0', false);
+  e.executeScanCycle(program);
+  assert.equal(e.getBit('B3:0/0'), true, 'start release retains latch');
+  e.setBit('I:0/1', false);
+  e.executeScanCycle(program);
+  assert.equal(e.getBit('B3:0/0'), false, 'stop press clears latch');
+  e.setBit('I:0/1', true);
+  e.executeScanCycle(program);
+  assert.equal(e.getBit('B3:0/0'), false, 'stop release does not restart');
+  e.setBit('I:0/0', true);
+  e.setBit('I:0/1', false);
+  e.executeScanCycle(program);
+  assert.equal(e.getBit('B3:0/0'), false, 'stop wins when both are pressed');
+});
+
+test('shear example starts, seals, and stops with normally closed input wiring', () => {
+  const e = engine();
+  const program = SAMPLE_PROGRAMS.find(p => p.id === 'metal-shear-auto').rungs;
+  const scan = () => e.executeScanCycle(program, 0.05);
+  e.setBit('I:0/1', true);
+  e.setBit('I:0/4', true);
+  scan();
+  assert.equal(e.getBit('B3:0/0'), false);
+  for (let i = 0; i < 4; i++) assert.equal(e.getBit(`O:0/${i}`), false);
+  e.setBit('I:0/0', true);
+  scan();
+  assert.equal(e.getBit('O:0/0'), true);
+  e.setBit('I:0/0', false);
+  scan();
+  assert.equal(e.getBit('B3:0/0'), true);
+  e.setBit('I:0/1', false);
+  scan();
+  assert.equal(e.getBit('B3:0/0'), false);
+  for (let i = 0; i < 4; i++) assert.equal(e.getBit(`O:0/${i}`), false);
+  e.setBit('I:0/1', true);
+  scan();
+  assert.equal(e.getBit('B3:0/0'), false);
+});
 test('later rungs see OTE writes in the same scan', () => {
   const e = engine(); e.setBit('I:0/0', true);
   e.executeScanCycle([rung(ins('XIC','I:0/0'),ins('OTE','B3:0/0')),rung(ins('XIC','B3:0/0'),ins('OTE','O:0/0'))]);
@@ -247,5 +298,4 @@ test('TOF (Timer Off Delay) energizes DN immediately on true rung and delays tur
   assert.equal(e.data.T4[1].DN, false, 'TOF DN turns false after delay');
   assert.equal(e.getBit('O:0/1'), false, 'O:0/1 turns OFF after off-delay');
 });
-
 
