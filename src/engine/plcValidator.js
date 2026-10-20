@@ -2,7 +2,21 @@
 // Provides clear, express diagnostic messages stating what the error is and how to fix it.
 import { normalizeAddress, INSTRUCTION_TYPES } from '../types/plcTypes.js';
 
-export function validateLadderLogic(rungs, strictMode = false) {
+export function resolveToHardwareAddress(rawAddr, symbols) {
+  if (!rawAddr) return '';
+  const s = String(rawAddr).trim();
+  if (symbols && typeof symbols === 'object') {
+    const upper = s.toUpperCase();
+    for (const [hwAddr, sym] of Object.entries(symbols)) {
+      if (sym && sym.trim().toUpperCase() === upper) {
+        return hwAddr;
+      }
+    }
+  }
+  return normalizeAddress(s);
+}
+
+export function validateLadderLogic(rungs, strictMode = false, symbols = {}) {
   const issues = [];
   const oteAddresses = new Map(); // addr -> [rungIdx]
 
@@ -85,14 +99,36 @@ export function validateLadderLogic(rungs, strictMode = false) {
       else hasInput = true;
 
       const address = normalizeAddress(item.operand);
+      const isHwPattern = /^[IOB]:\d+/i.test(address) || /^[IOB]\d*[:/]/i.test(address);
+      const isHwTimerPattern = /^T\d*[:/]/i.test(address);
+      const isKnownSymbol = symbols && typeof symbols === 'object' && (
+        Boolean(symbols[address]) ||
+        Object.values(symbols).some(s => s && s.trim().toUpperCase() === address.trim().toUpperCase())
+      );
+      const isCustomTag = (!isHwPattern && !isHwTimerPattern && /^[A-Za-z0-9_\- ]{1,40}$/.test(address)) || isKnownSymbol;
+
       const bitAddress = /^(?:[IO]:0\/[0-7]|B3:0\/(?:[0-9]|1[0-5])|T4:\d+\.(?:DN|TT|EN))$/;
       const coilAddress = /^(?:O:0\/[0-7]|B3:0\/(?:[0-9]|1[0-5]))$/;
-      const valid = ['XIC','XIO'].includes(item.type) ? bitAddress.test(address)
-        : ['OTE','OTL','OTU'].includes(item.type) ? coilAddress.test(address)
-        : ['TON','TOF','RTO','RES'].includes(item.type) ? /^T4:\d+$/.test(address) : true;
-      if (address && !valid) issues.push({ severity: 'error', rungIdx: rIdx, elemId: item.id,
-        message: `${item.type} on rung ${rIdx} has an invalid or unavailable address: ${address}.`,
-        fix: 'Choose an address compatible with this instruction from the address picker.' });
+
+      let valid = true;
+      if (['XIC', 'XIO'].includes(item.type)) {
+        valid = bitAddress.test(address) || isCustomTag;
+      } else if (['OTE', 'OTL', 'OTU'].includes(item.type)) {
+        valid = coilAddress.test(address) || isCustomTag;
+      } else if (['TON', 'TOF', 'RTO', 'RES'].includes(item.type)) {
+        valid = /^T4:\d+$/.test(address) || isCustomTag;
+      }
+
+      if (address && !valid) {
+        issues.push({
+          severity: 'error',
+          rungIdx: rIdx,
+          elemId: item.id,
+          title: 'Invalid Instruction Address',
+          message: `${item.type} on rung ${rIdx} has an invalid or unavailable address: ${address}.`,
+          fix: 'Choose an address compatible with this instruction from the address picker.'
+        });
+      }
 
       // Check operand presence
       const isBlockWithParams = ['ADD', 'SUB', 'MUL', 'DIV', 'MOV', 'EQU', 'NEQ', 'LES', 'LEQ', 'GRT', 'GEQ', 'LIM'].includes(item.type);
@@ -109,14 +145,15 @@ export function validateLadderLogic(rungs, strictMode = false) {
 
       // Check illegal output driving physical input
       if (['OTE', 'OTL', 'OTU'].includes(item.type) && item.operand) {
-        const norm = String(item.operand).toUpperCase().trim();
+        const resolved = resolveToHardwareAddress(item.operand, symbols);
+        const norm = resolved.toUpperCase().trim();
         if (norm.startsWith('I:') || norm.startsWith('I1:') || norm.startsWith('I0:')) {
           issues.push({
             severity: 'error',
             rungIdx: rIdx,
             elemId: item.id,
-            title: `Invalid Output Target: Physical Input (${norm})`,
-            message: `Instruction ${item.type} on Rung ${rIdx} is attempting to drive physical input address ${norm}. Output instructions cannot overwrite physical inputs!`,
+            title: `Invalid Output Target: Physical Input (${item.operand})`,
+            message: `Instruction ${item.type} on Rung ${rIdx} is attempting to drive physical input address ${item.operand} (${norm}). Output instructions cannot overwrite physical inputs!`,
             fix: `Change the coil address to an output (e.g. O:0/0) or an internal binary bit (e.g. B3:0/0).`
           });
         }
@@ -139,7 +176,8 @@ export function validateLadderLogic(rungs, strictMode = false) {
 
       // Track duplicate OTE coils
       if (item.type === 'OTE' && item.operand) {
-        const normalized = String(item.operand).toUpperCase().trim();
+        const resolved = resolveToHardwareAddress(item.operand, symbols);
+        const normalized = String(resolved || item.operand).toUpperCase().trim();
         if (!oteAddresses.has(normalized)) oteAddresses.set(normalized, []);
         oteAddresses.get(normalized).push(rIdx);
       }

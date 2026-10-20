@@ -1640,6 +1640,15 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
       ? 'text-amber-300 font-bold' 
       : 'text-cyan-300 font-bold';
 
+  const mappedHwAddress = useMemo(() => {
+    if (!symbols || !item?.operand) return null;
+    const upper = String(item.operand).trim().toUpperCase();
+    for (const [hw, sym] of Object.entries(symbols)) {
+      if (sym && sym.trim().toUpperCase() === upper) return hw;
+    }
+    return null;
+  }, [symbols, item?.operand]);
+
   const enclosureClass = isActive
     ? 'border-emerald-500/60 bg-emerald-950/40 shadow-[0_0_12px_rgba(16,185,129,0.22)]'
     : isSelected
@@ -1688,11 +1697,15 @@ function RungElementCard({ item, isSelected, isActive, onSelect, onOpenPicker, o
           <span>{item.operand || 'Assign'}</span>
           <ChevronDown className="w-3 h-3 opacity-70" />
         </div>
-        {symbols?.[item.operand] && (
+        {symbols?.[item.operand] ? (
           <span className="text-[10px] text-slate-300 font-bold px-1 whitespace-nowrap overflow-hidden max-w-[80px] text-ellipsis leading-tight">
             {symbols[item.operand]}
           </span>
-        )}
+        ) : mappedHwAddress ? (
+          <span className="text-[10px] text-cyan-300/80 font-bold px-1 whitespace-nowrap overflow-hidden max-w-[80px] text-ellipsis leading-tight">
+            ({mappedHwAddress})
+          </span>
+        ) : null}
       </button>
 
       {/* Symbol with double-click-to-cycle (prevents accidental toggling on single-click/drag) */}
@@ -2265,8 +2278,8 @@ function IOSReactionAddressPicker({
   }, [allItems, selectedCategory, searchQuery]);
 
   const normalizedQuery = searchQuery.trim().toUpperCase();
-  const hasExactMatch = allItems.some(i => i.addr.toUpperCase() === normalizedQuery);
-  const isValidAddressFormat = /^[IOTEB3T4N7S2]:\d+(\/\d+|\.\w+)?$/i.test(normalizedQuery) || /^[A-Z0-9_]{2,16}$/i.test(normalizedQuery);
+  const hasExactMatch = allItems.some(i => i.addr.toUpperCase() === normalizedQuery || (i.displayLabel && i.displayLabel.toUpperCase() === normalizedQuery));
+  const isValidAddressFormat = /^[IOTEB3T4N7S2]:\d+(\/\d+|\.\w+)?$/i.test(normalizedQuery) || /^[A-Z0-9_\- ]{1,32}$/i.test(normalizedQuery);
 
   const handleStartEdit = (addr, currentLabel, e) => {
     e.stopPropagation();
@@ -2450,7 +2463,12 @@ function IOSReactionAddressPicker({
                 className="w-full bg-black/40 border border-white/15 rounded-lg pl-8 pr-2 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 font-mono"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    if (normalizedQuery) {
+                    const exact = allItems.find(i => i.addr.toUpperCase() === normalizedQuery || (i.displayLabel && i.displayLabel.toUpperCase() === normalizedQuery));
+                    if (exact) {
+                      onSelectAddress(exact.addr);
+                    } else if (filteredItems.length === 1) {
+                      onSelectAddress(filteredItems[0].addr);
+                    } else if (normalizedQuery && isValidAddressFormat) {
                       onSelectAddress(normalizedQuery);
                     } else if (filteredItems.length > 0) {
                       onSelectAddress(filteredItems[0].addr);
@@ -2486,7 +2504,7 @@ function IOSReactionAddressPicker({
                 className="mb-2 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-cyan-400 bg-cyan-600/30 text-cyan-200 text-xs font-mono font-bold cursor-pointer hover:bg-cyan-600/50 transition active:scale-95"
               >
                 <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                <span>Use Custom: {normalizedQuery}</span>
+                <span>Use Custom Tag: {normalizedQuery}</span>
               </button>
             )}
 

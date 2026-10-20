@@ -261,7 +261,7 @@ export function App() {
   const [hasAttemptedRun, setHasAttemptedRun] = useState(false);
 
   // Real-time ladder logic error validation
-  const logicIssues = useMemo(() => validateLadderLogic(currentRungs, hasAttemptedRun), [currentRungs, hasAttemptedRun]);
+  const logicIssues = useMemo(() => validateLadderLogic(currentRungs, hasAttemptedRun, activeSymbols), [currentRungs, hasAttemptedRun, activeSymbols]);
   const hasErrors = logicIssues.some(i => i.severity === 'error');
 
   // Check first-time tutorial
@@ -274,11 +274,12 @@ export function App() {
     }
   }, []);
 
-  // Synchronize rungs with engine
+  // Synchronize rungs and active symbols with engine
   useEffect(() => {
     engine.currentRungs = currentRungs;
+    engine.symbols = activeSymbols;
     setScanResult(null);
-  }, [currentRungs, engine]);
+  }, [currentRungs, engine, activeSymbols]);
 
   // Subscribe to scan ticks
   useEffect(() => {
@@ -341,7 +342,7 @@ export function App() {
       handleResetMemory();
     } else {
       setHasAttemptedRun(true);
-      const allIssues = validateLadderLogic(currentRungs, true);
+      const allIssues = validateLadderLogic(currentRungs, true, activeSymbols);
       if (allIssues.some(i => i.severity === 'error')) {
         return;
       }

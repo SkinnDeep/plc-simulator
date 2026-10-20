@@ -103,6 +103,38 @@ test('validation rejects nonexistent addresses and invalid presets',()=>{
   assert.ok(validateLadderLogic([rung(ins('TON','T4:0',{pre:'bad'}))]).some(i=>i.severity==='error'));
 });
 
+test('custom names and symbol aliases are allowed and execute accurately in validation and engine', () => {
+  const symbols = { 'I:0/2': 'RAM SENSOR', 'O:0/0': 'CONV1' };
+
+  // 1. Custom tag name on contact (like user's RAM SENSOR on rung 6) passes validation
+  const issuesCustom = validateLadderLogic([rung(ins('XIC', 'RAM SENSOR'), ins('OTE', 'O:0/0'))], true, symbols);
+  assert.equal(issuesCustom.filter(i => i.severity === 'error').length, 0, 'RAM SENSOR should be valid on XIC');
+
+  // 2. Standalone custom bit tags without hardware mapping also pass validation
+  const issuesStandalone = validateLadderLogic([rung(ins('XIC', 'I:0/0'), ins('OTE', 'CUSTOM_FLAG'))], true);
+  assert.equal(issuesStandalone.filter(i => i.severity === 'error').length, 0, 'CUSTOM_FLAG should be valid on OTE');
+
+  // 3. Custom symbol aliasing physical input is prevented from being written by OTE
+  const issuesIllegalInput = validateLadderLogic([rung(ins('XIC', 'I:0/0'), ins('OTE', 'RAM SENSOR'))], true, symbols);
+  assert.ok(issuesIllegalInput.some(i => i.severity === 'error' && (i.title?.includes('Physical Input') || i.message?.includes('physical input'))), 'OTE on input symbol rejected');
+
+  // 4. Engine execution with custom tags and symbols
+  const e = engine();
+  e.symbols = symbols;
+  e.setBit('I:0/2', true);
+  assert.equal(e.getBit('RAM SENSOR'), true, 'getBit resolves RAM SENSOR to I:0/2');
+
+  const program = [rung(ins('XIC', 'RAM SENSOR'), ins('OTE', 'CONV1'))];
+  e.executeScanCycle(program);
+  assert.equal(e.getBit('O:0/0'), true, 'CONV1 OTE writes to O:0/0');
+  assert.equal(e.getBit('CONV1'), true, 'getBit(CONV1) also returns true');
+
+  // Standalone custom tag retains in data.bits
+  const program2 = [rung(ins('XIC', 'I:0/2'), ins('OTE', 'MY_INTERNAL_TAG'))];
+  e.executeScanCycle(program2);
+  assert.equal(e.getBit('MY_INTERNAL_TAG'), true, 'Custom internal tag energized');
+});
+
 test('compare instructions (EQU, NEQ, GRT, GEQ, LES, LEQ) evaluate correctly and drive coils', () => {
   const e = engine();
   e.setValue('N7:0', 10);

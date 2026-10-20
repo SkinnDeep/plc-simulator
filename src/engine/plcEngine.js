@@ -2,8 +2,9 @@
 import { normalizeAddress } from '../types/plcTypes.js';
 
 export class PLCEngine {
-  constructor(initialData) {
+  constructor(initialData, symbols = null) {
     this.data = initialData;
+    this.symbols = symbols;
     this.isRunning = false;
     this.scanInterval = null;
     this.scanPeriodMs = 50; // 20 scans per second
@@ -50,14 +51,30 @@ export class PLCEngine {
     return this.data.T4[idx];
   }
 
+  // Resolve symbol aliases to hardware addresses or normalized addresses
+  resolveAddress(rawAddr) {
+    if (rawAddr === undefined || rawAddr === null) return '';
+    const s = String(rawAddr).trim();
+    if (!s) return '';
+    if (this.symbols && typeof this.symbols === 'object') {
+      const upper = s.toUpperCase();
+      for (const [hwAddr, sym] of Object.entries(this.symbols)) {
+        if (sym && sym.trim().toUpperCase() === upper) {
+          return hwAddr;
+        }
+      }
+    }
+    return normalizeAddress(s);
+  }
+
   // Address lookup helper
   getBit(rawAddr) {
-    const addr = normalizeAddress(rawAddr);
-    if (!addr) return false;
+    const resolved = this.resolveAddress(rawAddr);
+    if (!resolved) return false;
 
     // Timer bit flags (T4:0.DN, T4:0.TT, T4:0.EN)
-    if (addr.startsWith('T4:')) {
-      const match = addr.match(/^T4:(\d+)(?:\.([A-Z]+))?$/);
+    if (resolved.startsWith('T4:')) {
+      const match = resolved.match(/^T4:(\d+)(?:\.([A-Z]+))?$/);
       if (match) {
         const idx = parseInt(match[1], 10);
         const bit = (match[2] || 'DN').toUpperCase();
@@ -72,8 +89,8 @@ export class PLCEngine {
     }
 
     // Counter bit flags (C5:0.DN, C5:0.CU)
-    if (addr.startsWith('C5:')) {
-      const match = addr.match(/^C5:(\d+)(?:\.([A-Z]+))?$/);
+    if (resolved.startsWith('C5:')) {
+      const match = resolved.match(/^C5:(\d+)(?:\.([A-Z]+))?$/);
       if (match) {
         const idx = parseInt(match[1], 10);
         const bit = (match[2] || 'DN').toUpperCase();
@@ -86,28 +103,39 @@ export class PLCEngine {
       return false;
     }
 
-    // Direct bit from image table (I:0/0, O:0/0, B3:0/0, etc.)
-    return !!this.data.bits[addr];
+    // Direct bit from image table (I:0/0, O:0/0, B3:0/0, or custom tag name)
+    if (this.data.bits[resolved] !== undefined) {
+      return !!this.data.bits[resolved];
+    }
+    const rawTrimmed = String(rawAddr).trim();
+    if (this.data.bits[rawTrimmed] !== undefined) {
+      return !!this.data.bits[rawTrimmed];
+    }
+    return false;
   }
 
   setBit(rawAddr, val) {
-    const addr = normalizeAddress(rawAddr);
-    if (!addr) return;
-    this.data.bits[addr] = !!val;
+    const resolved = this.resolveAddress(rawAddr);
+    if (!resolved) return;
+    this.data.bits[resolved] = !!val;
+    const rawTrimmed = String(rawAddr).trim();
+    if (rawTrimmed && rawTrimmed !== resolved) {
+      this.data.bits[rawTrimmed] = !!val;
+    }
   }
 
   getValue(rawAddr) {
     if (rawAddr === undefined || rawAddr === null) return 0;
-    const addr = normalizeAddress(rawAddr);
+    const resolved = this.resolveAddress(rawAddr);
 
     // Constant number
-    if (/^-?\d+(\.\d+)?$/.test(addr)) {
-      return parseFloat(addr);
+    if (/^-?\d+(\.\d+)?$/.test(resolved)) {
+      return parseFloat(resolved);
     }
 
     // Integer register (N7:1)
-    if (addr.startsWith('N7:')) {
-      const idx = parseInt(addr.replace('N7:', ''), 10);
+    if (resolved.startsWith('N7:')) {
+      const idx = parseInt(resolved.replace('N7:', ''), 10);
       if (!isNaN(idx) && idx >= 0 && idx < this.data.N7.length) {
         return this.data.N7[idx] || 0;
       }
@@ -115,8 +143,8 @@ export class PLCEngine {
     }
 
     // Timer ACC / PRE (T4:1.ACC)
-    if (addr.startsWith('T4:')) {
-      const match = addr.match(/^T4:(\d+)\.([A-Z]+)$/);
+    if (resolved.startsWith('T4:')) {
+      const match = resolved.match(/^T4:(\d+)\.([A-Z]+)$/);
       if (match) {
         const idx = parseInt(match[1], 10);
         const field = match[2].toUpperCase();
@@ -126,12 +154,12 @@ export class PLCEngine {
           if (field === 'PRE') return timer.PRE;
         }
       }
-      return this.getBit(addr) ? 1 : 0;
+      return this.getBit(resolved) ? 1 : 0;
     }
 
     // Counter ACC / PRE (C5:0.ACC)
-    if (addr.startsWith('C5:')) {
-      const match = addr.match(/^C5:(\d+)\.([A-Z]+)$/);
+    if (resolved.startsWith('C5:')) {
+      const match = resolved.match(/^C5:(\d+)\.([A-Z]+)$/);
       if (match) {
         const idx = parseInt(match[1], 10);
         const field = match[2].toUpperCase();
@@ -141,27 +169,27 @@ export class PLCEngine {
           if (field === 'PRE') return counter.PRE || 0;
         }
       }
-      return this.getBit(addr) ? 1 : 0;
+      return this.getBit(resolved) ? 1 : 0;
     }
 
-    return this.getBit(addr) ? 1 : 0;
+    return this.getBit(resolved) ? 1 : 0;
   }
 
   setValue(rawAddr, val) {
-    const addr = normalizeAddress(rawAddr);
-    if (!addr) return;
+    const resolved = this.resolveAddress(rawAddr);
+    if (!resolved) return;
     const num = Number(val);
     if (!Number.isFinite(num)) return;
 
-    if (addr.startsWith('N7:')) {
-      const idx = parseInt(addr.replace('N7:', ''), 10);
+    if (resolved.startsWith('N7:')) {
+      const idx = parseInt(resolved.replace('N7:', ''), 10);
       if (!isNaN(idx) && idx >= 0 && idx < this.data.N7.length) {
         this.data.N7[idx] = Math.round(num);
       }
       return;
     }
 
-    this.setBit(addr, num !== 0);
+    this.setBit(resolved, num !== 0);
   }
 
   // Execute authentic 4-phase scan cycle
@@ -193,9 +221,13 @@ export class PLCEngine {
     // Writes already occurred in program order. Clear unreferenced physical outputs.
     for (let o = 0; o < 8; o++) {
       const oAddr = `O:0/${o}`;
-      if (!this.latchedOutputs.has(oAddr) && !oteEvaluations.has(oAddr)) {
+      const sym = this.symbols?.[oAddr];
+      const isControlled = this.latchedOutputs.has(oAddr) || oteEvaluations.has(oAddr) ||
+        (sym && (this.latchedOutputs.has(sym) || oteEvaluations.has(sym)));
+      if (!isControlled) {
         // Output not in program -> turn OFF!
         this.data.bits[oAddr] = false;
+        if (sym) this.data.bits[sym] = false;
       }
     }
 
@@ -307,10 +339,16 @@ export class PLCEngine {
       case 'OTE': {
         // Standard Coil: tracks state into oteEvaluations
         active = powerIn;
-        if (/^(O:0\/\d+|B3:0\/\d+)$/.test(operand) && Object.hasOwn(this.data.bits, operand)) {
-          oteEvaluations.set(operand, powerIn);
-          this.latchedOutputs.delete(operand);
-          this.setBit(operand, powerIn);
+        const resolved = this.resolveAddress(item.operand);
+        const isInput = resolved.startsWith('I:');
+        if (!isInput && resolved) {
+          oteEvaluations.set(resolved, powerIn);
+          if (item.operand && String(item.operand).trim() !== resolved) {
+            oteEvaluations.set(String(item.operand).trim(), powerIn);
+          }
+          this.latchedOutputs.delete(resolved);
+          this.latchedOutputs.delete(String(item.operand).trim());
+          this.setBit(resolved, powerIn);
         }
         powerOut = powerIn;
         break;
@@ -318,25 +356,34 @@ export class PLCEngine {
 
       case 'OTL': {
         // Latch Output: if rung is true, latches bit ON
-        if (powerIn && /^(O:0\/\d+|B3:0\/\d+)$/.test(operand) && Object.hasOwn(this.data.bits, operand)) {
-          this.latchedOutputs.add(operand);
-          this.setBit(operand, true);
+        const resolved = this.resolveAddress(item.operand);
+        const isInput = resolved.startsWith('I:');
+        if (powerIn && !isInput && resolved) {
+          this.latchedOutputs.add(resolved);
+          this.latchedOutputs.add(String(item.operand).trim());
+          this.setBit(resolved, true);
         }
-        active = operand ? this.latchedOutputs.has(operand) : false;
+        active = resolved ? (this.latchedOutputs.has(resolved) || this.latchedOutputs.has(String(item.operand).trim())) : false;
         powerOut = powerIn;
         break;
       }
 
       case 'OTU': {
         // Unlatch Output: if rung is true, removes latch and sets to false
-        if (powerIn && /^(O:0\/\d+|B3:0\/\d+)$/.test(operand) && Object.hasOwn(this.data.bits, operand)) {
-          this.latchedOutputs.delete(operand);
-          this.setBit(operand, false);
-          if (oteEvaluations.has(operand)) {
-            oteEvaluations.set(operand, false);
+        const resolved = this.resolveAddress(item.operand);
+        const isInput = resolved.startsWith('I:');
+        if (powerIn && !isInput && resolved) {
+          this.latchedOutputs.delete(resolved);
+          this.latchedOutputs.delete(String(item.operand).trim());
+          this.setBit(resolved, false);
+          if (oteEvaluations.has(resolved)) {
+            oteEvaluations.set(resolved, false);
+          }
+          if (oteEvaluations.has(String(item.operand).trim())) {
+            oteEvaluations.set(String(item.operand).trim(), false);
           }
         }
-        active = operand ? !this.latchedOutputs.has(operand) : false;
+        active = resolved ? (!this.latchedOutputs.has(resolved) && !this.latchedOutputs.has(String(item.operand).trim())) : false;
         powerOut = powerIn;
         break;
       }
